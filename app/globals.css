@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+* {
+  scrollbar-width: thin;
+}
+
+body {
+  background-color: theme("colors.paper");
+  color: theme("colors.ink.DEFAULT");
+}
+
+/* Keyboard focus should always be visible, even though we style away
+   default browser outlines for a cleaner look on mouse/touch. */
+:focus-visible {
+  outline: 2px solid theme("colors.signal.DEFAULT");
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@layer components {
+  /* Primary action: the one place motion + color get to be a little bold
+     (buy, pay, confirm receipt). */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-seal px-5 py-2.5
+      text-sm font-semibold text-white shadow-sm transition-all duration-200 ease-out
+      hover:bg-seal-dark hover:shadow-md active:scale-[0.97]
+      disabled:cursor-not-allowed disabled:bg-ink-faint disabled:shadow-none disabled:active:scale-100;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-border bg-surface
+      px-5 py-2.5 text-sm font-semibold text-ink transition-all duration-200 ease-out
+      hover:border-ink/20 hover:bg-paper active:scale-[0.97]
+      disabled:cursor-not-allowed disabled:text-ink-faint disabled:active:scale-100;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium
+      text-ink-soft transition-all duration-200 ease-out hover:bg-paper hover:text-ink active:scale-[0.97];
+  }
+
+  .btn-danger-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium
+      text-danger transition-all duration-200 ease-out hover:bg-danger-soft active:scale-[0.97];
+  }
+
+  .icon-btn {
+    @apply relative inline-flex h-10 w-10 items-center justify-center rounded-full text-ink-soft
+      transition-all duration-200 ease-out hover:bg-paper hover:text-ink active:scale-90;
+  }
+
+  .card {
+    @apply rounded-2xl border border-border bg-surface;
+  }
+
+  .input-field {
+    @apply w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-ink
+      placeholder:text-ink-faint transition-colors duration-150 focus:border-ledger
+      focus:outline-none;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium;
+  }
+}
