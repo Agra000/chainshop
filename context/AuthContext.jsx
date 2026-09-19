@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { generateWalletAddress } from "@/lib/format";
+import { authService } from "@/services/AuthService";
 
 const AuthContext = createContext(null);
 const STORAGE_KEY = "chainshop_user";
@@ -9,6 +9,7 @@ const STORAGE_KEY = "chainshop_user";
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [hydrated, setHydrated] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     try {
@@ -30,31 +31,76 @@ export function AuthProvider({ children }) {
     }
   }, [user, hydrated]);
 
-  function login({ name, email }) {
-    setUser({
-      name: name?.trim() || "ChainShop User",
-      email: email?.trim() || "",
-      walletAddress: generateWalletAddress(),
-      avatarSeed: `${Date.now()}`,
-      phone: "",
-      address: "",
-      joinedAt: new Date().toISOString(),
-      authMethod: "email",
-    });
+  // 1. Fungsi Login Berbasis Email / Auth Biasa
+  async function login({ email, password, name }) {
+    try {
+      setIsLoading(true);
+
+      const payload = {
+        email: email?.trim(),
+        password: password, // jika backend menggunakan password
+        name: name?.trim() || "ChainShop User",
+      };
+
+      // Tembak ke API login backend
+      const res = await authService.login(payload);
+
+      // Simpan user dari database ke state
+      setUser({
+        ...res.user,
+        avatarSeed: res.user.email || `${Date.now()}`,
+        joinedAt: res.user.createdAt || new Date().toISOString(),
+      });
+
+      return res;
+    } catch (error) {
+      console.error("Email login error:", error);
+      alert(error?.response?.data?.message || "Gagal melakukan login.");
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
   }
 
-  function loginWithWallet() {
-    const address = generateWalletAddress();
-    setUser({
-      name: `Wallet User`,
-      email: "",
-      walletAddress: address,
-      avatarSeed: address,
-      phone: "",
-      address: "",
-      joinedAt: new Date().toISOString(),
-      authMethod: "wallet",
-    });
+  // 2. Fungsi Login Berbasis MetaMask Wallet
+  async function loginWithWallet() {
+    if (typeof window.ethereum === "undefined") {
+      alert("Silakan install ekstensi MetaMask di browser Anda!");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+
+      const accounts = await window.ethereum.request({
+        method: "eth_requestAccounts",
+      });
+      const walletAddress = accounts[0];
+
+      const payload = {
+        walletAddress: walletAddress,
+      };
+
+      const res = await authService.loginWithWallet(payload);
+
+      if (res.status === true) {
+        console.log("res:", res);
+        setUser({
+          name: res.idToken || "ChainShop User",
+          email: res.idToken + "@gmail.com",
+          walletAddress: res.walletAddress,
+        });
+      }
+
+      // return res;
+      return;
+    } catch (error) {
+      console.error("Wallet login error:", error);
+      alert(error?.response?.data?.message || "Gagal menghubungkan wallet.");
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   function logout() {
@@ -67,7 +113,16 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isLoggedIn: !!user, login, loginWithWallet, logout, updateProfile, hydrated }}
+      value={{
+        user,
+        isLoggedIn: !!user,
+        isLoading,
+        login,
+        loginWithWallet,
+        logout,
+        updateProfile,
+        hydrated,
+      }}
     >
       {children}
     </AuthContext.Provider>
