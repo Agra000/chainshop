@@ -84,7 +84,7 @@ export function AuthProvider({ children }) {
       const res = await authService.loginWithWallet(payload);
 
       if (res.status === true) {
-        console.log("res:", res);
+        // console.log("res:", res);
         setUser({
           name: res.idToken || "ChainShop User",
           email: res.idToken + "@gmail.com",

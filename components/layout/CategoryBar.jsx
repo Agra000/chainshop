@@ -2,11 +2,32 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { categories } from "@/data/categories";
+import { fetchCategories } from "@/data/categories";
+import { useEffect, useState } from "react"; // 1. Import useState
 
 export function CategoryBar() {
   const searchParams = useSearchParams();
   const activeCategory = searchParams.get("category") || "all";
+
+  // 2. Buat state untuk menyimpan data categories
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      setLoading(true);
+      const data = await fetchCategories(); // 3. Ambil data hasil return
+      setCategories(data); // 4. Masukkan data ke React State
+      setLoading(false);
+    }
+
+    loadData();
+  }, []);
+
+  // Opsional: Tampilkan fallback saat data sedang dimuat
+  if (loading) {
+    return <CategoryBarFallback />;
+  }
 
   return (
     <nav
@@ -25,7 +46,7 @@ export function CategoryBar() {
                 : "border-transparent bg-transparent text-ink-soft hover:bg-surface hover:text-ink"
             }`}
           >
-            {cat.label}
+            {cat.slug}
           </Link>
         );
       })}

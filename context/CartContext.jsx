@@ -34,7 +34,7 @@ export function CartProvider({ children }) {
       const existing = prev.find((it) => it.id === product.id);
       if (existing) {
         return prev.map((it) =>
-          it.id === product.id ? { ...it, qty: it.qty + qty } : it
+          it.id === product.id ? { ...it, qty: it.qty + qty } : it,
         );
       }
       return [
@@ -42,7 +42,7 @@ export function CartProvider({ children }) {
         {
           id: product.id,
           name: product.name,
-          image: product.images?.[0],
+          image: product.slug,
           price: product.price,
           category: product.category,
           qty,
@@ -59,13 +59,13 @@ export function CartProvider({ children }) {
 
   function setQty(id, qty) {
     setItems((prev) =>
-      prev.map((it) => (it.id === id ? { ...it, qty: Math.max(1, qty) } : it))
+      prev.map((it) => (it.id === id ? { ...it, qty: Math.max(1, qty) } : it)),
     );
   }
 
   function toggleSelect(id) {
     setItems((prev) =>
-      prev.map((it) => (it.id === id ? { ...it, selected: !it.selected } : it))
+      prev.map((it) => (it.id === id ? { ...it, selected: !it.selected } : it)),
     );
   }
 
@@ -87,15 +87,21 @@ export function CartProvider({ children }) {
     return selected;
   }
 
-  const selectedItems = useMemo(() => items.filter((it) => it.selected), [items]);
-  const totalCount = useMemo(() => items.reduce((sum, it) => sum + it.qty, 0), [items]);
+  const selectedItems = useMemo(
+    () => items.filter((it) => it.selected),
+    [items],
+  );
+  const totalCount = useMemo(
+    () => items.reduce((sum, it) => sum + it.qty, 0),
+    [items],
+  );
   const selectedCount = useMemo(
     () => selectedItems.reduce((sum, it) => sum + it.qty, 0),
-    [selectedItems]
+    [selectedItems],
   );
   const selectedSubtotal = useMemo(
     () => selectedItems.reduce((sum, it) => sum + it.qty * it.price, 0),
-    [selectedItems]
+    [selectedItems],
   );
 
   return (
