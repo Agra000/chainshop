@@ -40,6 +40,7 @@ export function AuthProvider({ children }) {
       address: "",
       joinedAt: new Date().toISOString(),
       authMethod: "email",
+      shop: null, // null = not yet a seller
     });
   }
 
@@ -54,6 +55,7 @@ export function AuthProvider({ children }) {
       address: "",
       joinedAt: new Date().toISOString(),
       authMethod: "wallet",
+      shop: null,
     });
   }
 
@@ -65,9 +67,60 @@ export function AuthProvider({ children }) {
     setUser((prev) => (prev ? { ...prev, ...partial } : prev));
   }
 
+  /**
+   * Register the current user as a seller.
+   * `shopData` shape: { shopName, shopSlug, shopDescription, city, payoutWallet }
+   */
+  function registerSeller(shopData) {
+    setUser((prev) =>
+      prev
+        ? {
+            ...prev,
+            shop: {
+              ...shopData,
+              registeredAt: new Date().toISOString(),
+            },
+          }
+        : prev
+    );
+  }
+
+  /**
+   * Update an existing seller's shop details (same shape as registerSeller).
+   */
+  function updateShop(partial) {
+    setUser((prev) =>
+      prev && prev.shop
+        ? { ...prev, shop: { ...prev.shop, ...partial } }
+        : prev
+    );
+  }
+
+  /**
+   * Permanently delete the seller's shop, reverting the user back to a
+   * regular buyer. Equivalent to "unregister seller".
+   */
+  function deleteShop() {
+    setUser((prev) => (prev ? { ...prev, shop: null } : prev));
+  }
+
+  const isSeller = !!user?.shop;
+
   return (
     <AuthContext.Provider
-      value={{ user, isLoggedIn: !!user, login, loginWithWallet, logout, updateProfile, hydrated }}
+      value={{
+        user,
+        isLoggedIn: !!user,
+        isSeller,
+        login,
+        loginWithWallet,
+        logout,
+        updateProfile,
+        registerSeller,
+        updateShop,
+        deleteShop,
+        hydrated,
+      }}
     >
       {children}
     </AuthContext.Provider>
