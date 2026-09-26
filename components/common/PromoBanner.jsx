@@ -1,10 +1,13 @@
+import { ShoppingCart, ShieldCheck, LayoutGrid, Lock } from "lucide-react";
+
 export function PromoBanner() {
   return (
-    <section className="overflow-hidden rounded-2xl border border-border bg-surface">
+    <section className="overflow-hidden rounded-2xl border border-navbar-soft bg-gradient-to-br from-navbar-soft via-white to-white">
       <div className="grid items-center gap-6 px-6 py-8 sm:px-10 sm:py-10 md:grid-cols-[1.2fr_1fr]">
         <div>
           <h1 className="font-display text-2xl font-bold leading-snug text-ink sm:text-[28px]">
-            Shop like always. Your money waits in escrow until the order lands.
+            Shop like always.{" "}
+            <span className="text-navbar">Your money waits in escrow until the order lands.</span>
           </h1>
           <p className="mt-3 max-w-md text-[15px] text-ink-soft">
             Prices are in Rupiah, checkout feels like any marketplace — the
@@ -12,45 +15,43 @@ export function PromoBanner() {
             contract and only reach the seller once you confirm the parcel
             arrived.
           </p>
-          <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm">
-            <div>
-              <p className="font-display text-lg font-semibold text-ink">13</p>
-              <p className="text-ink-faint">categories to browse</p>
+          <div className="mt-5 flex flex-wrap gap-x-6 gap-y-3 text-sm">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-navbar-soft text-navbar">
+                <LayoutGrid size={15} strokeWidth={2.25} />
+              </span>
+              <div>
+                <p className="font-display text-lg font-semibold text-ink">13</p>
+                <p className="text-ink-faint">categories to browse</p>
+              </div>
             </div>
-            <div>
-              <p className="font-display text-lg font-semibold text-ink">0%</p>
-              <p className="text-ink-faint">held by anyone but the contract</p>
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-navbar-soft text-navbar">
+                <Lock size={14} strokeWidth={2.25} />
+              </span>
+              <div>
+                <p className="font-display text-lg font-semibold text-ink">0%</p>
+                <p className="text-ink-faint">held by anyone but the contract</p>
+              </div>
             </div>
           </div>
         </div>
 
         <div className="relative mx-auto hidden h-40 w-full max-w-[220px] items-center justify-center md:flex">
-          <ReceiptSealIllustration />
+          <EscrowCartIllustration />
         </div>
       </div>
     </section>
   );
 }
 
-function ReceiptSealIllustration() {
+function EscrowCartIllustration() {
   return (
-    <svg viewBox="0 0 200 160" className="h-full w-full" aria-hidden="true">
-      <rect x="35" y="10" width="100" height="130" rx="6" fill="#EEF1EC" stroke="#DCE3DC" strokeWidth="2" />
-      <line x1="50" y1="34" x2="120" y2="34" stroke="#93A29D" strokeWidth="3" strokeLinecap="round" />
-      <line x1="50" y1="48" x2="120" y2="48" stroke="#DCE3DC" strokeWidth="3" strokeLinecap="round" />
-      <line x1="50" y1="60" x2="100" y2="60" stroke="#DCE3DC" strokeWidth="3" strokeLinecap="round" />
-      <line x1="50" y1="82" x2="120" y2="82" stroke="#DCE3DC" strokeWidth="3" strokeLinecap="round" />
-      <line x1="50" y1="94" x2="90" y2="94" stroke="#DCE3DC" strokeWidth="3" strokeLinecap="round" />
-      <circle cx="140" cy="108" r="34" fill="#C1651C" />
-      <circle cx="140" cy="108" r="34" fill="none" stroke="#9C5015" strokeWidth="2" strokeDasharray="3 4" />
-      <path
-        d="M126 108l9 9 20-20"
-        fill="none"
-        stroke="white"
-        strokeWidth="5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <div className="relative flex h-32 w-32 items-center justify-center rounded-full bg-white shadow-sm">
+      <ShoppingCart size={60} strokeWidth={1.5} className="text-navbar" />
+      <span className="absolute bottom-2 right-3 flex h-11 w-11 items-center justify-center rounded-full bg-navbar text-white shadow-md ring-4 ring-white">
+        <ShieldCheck size={20} strokeWidth={2.25} />
+      </span>
+    </div>
   );
 }

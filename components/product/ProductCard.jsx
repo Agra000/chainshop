@@ -45,7 +45,7 @@ export function ProductCard({ product }) {
           className={`absolute bottom-2 right-2 flex h-9 w-9 items-center justify-center rounded-full shadow-md transition-all duration-200 ease-out active:scale-90 ${
             justAdded
               ? "bg-ledger text-white"
-              : "bg-surface text-ink hover:bg-seal hover:text-white"
+              : "bg-surface text-ink hover:bg-navbar hover:text-white"
           }`}
         >
           {justAdded ? <Check size={16} /> : <Plus size={16} />}
@@ -54,7 +54,7 @@ export function ProductCard({ product }) {
 
       <div className="flex flex-1 flex-col gap-1.5 p-3">
         <p className="line-clamp-2 min-h-[2.5rem] text-sm text-ink">{product.name}</p>
-        <p className="font-display text-base font-semibold text-ink">
+        <p className="font-display text-base font-semibold text-navbar">
           {formatIDR(product.price)}
         </p>
         <div className="mt-auto flex items-center justify-between pt-1">

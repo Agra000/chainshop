@@ -18,7 +18,7 @@ export function SearchBar() {
     <form
       onSubmit={handleSubmit}
       role="search"
-      className="flex w-full items-center overflow-hidden rounded-full border border-border bg-paper transition-colors duration-200 focus-within:border-ledger focus-within:bg-surface"
+      className="flex w-full items-stretch overflow-hidden rounded-full border border-transparent bg-white transition-colors duration-200 focus-within:border-navbar-dark"
     >
       <input
         type="text"
@@ -31,7 +31,7 @@ export function SearchBar() {
       <button
         type="submit"
         aria-label="Search"
-        className="flex h-full items-center gap-1.5 self-stretch bg-ledger px-4 text-white transition-colors duration-200 hover:bg-ledger-dark active:scale-[0.97]"
+        className="flex items-center gap-1.5 bg-navbar px-4 text-white transition-colors duration-200 hover:bg-navbar-dark active:scale-[0.97]"
       >
         <Search size={17} strokeWidth={2.25} />
       </button>

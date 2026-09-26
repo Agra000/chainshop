@@ -10,7 +10,8 @@ import { formatIDR } from "@/lib/format";
 
 export default function CartPage() {
   const router = useRouter();
-  const { items, selectAll, selectedItems, selectedCount, selectedSubtotal } = useCart();
+  const { items, selectAll, selectedItems, selectedCount, selectedSubtotal } =
+    useCart();
 
   const allSelected = items.length > 0 && selectedItems.length === items.length;
 
@@ -22,7 +23,9 @@ export default function CartPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-4 pb-32 sm:px-6 lg:px-8">
       <BackButton />
-      <h1 className="mb-4 mt-1 font-display text-xl font-semibold text-ink">Shopping Cart</h1>
+      <h1 className="mb-4 mt-1 font-display text-xl font-semibold text-ink">
+        Shopping Cart
+      </h1>
 
       {items.length === 0 ? (
         <EmptyState

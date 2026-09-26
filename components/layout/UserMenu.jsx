@@ -47,17 +47,17 @@ export function UserMenu() {
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2.5 transition-colors duration-200 hover:bg-paper"
+          className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2.5 transition-colors duration-200 hover:bg-white/15"
           aria-haspopup="menu"
           aria-expanded={open}
         >
           <Avatar name={user.name} seed={user.walletAddress} size={32} />
-          <span className="hidden max-w-[110px] truncate text-sm font-medium text-ink sm:inline">
+          <span className="hidden max-w-[110px] truncate text-sm font-medium text-white sm:inline">
             {user.name}
           </span>
           <ChevronDown
             size={15}
-            className={`hidden text-ink-soft transition-transform duration-200 sm:inline ${
+            className={`hidden text-white/80 transition-transform duration-200 sm:inline ${
               open ? "rotate-180" : ""
             }`}
           />
