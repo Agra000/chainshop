@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { fetchCategories } from "@/data/categories";
-import { useEffect, useState } from "react"; // 1. Import useState
+// import { useEffect, useState } from "react"; // 1. Import useState
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export function CategoryBar() {
@@ -39,13 +39,19 @@ export function CategoryBar() {
   function scrollLeft() {
     const el = scrollerRef.current;
     if (!el) return;
-    el.scrollBy({ left: -Math.min(260, el.clientWidth * 0.8), behavior: "smooth" });
+    el.scrollBy({
+      left: -Math.min(260, el.clientWidth * 0.8),
+      behavior: "smooth",
+    });
   }
 
   function scrollRight() {
     const el = scrollerRef.current;
     if (!el) return;
-    el.scrollBy({ left: Math.min(260, el.clientWidth * 0.8), behavior: "smooth" });
+    el.scrollBy({
+      left: Math.min(260, el.clientWidth * 0.8),
+      behavior: "smooth",
+    });
   }
 
   // 2. Buat state untuk menyimpan data categories
@@ -69,7 +75,10 @@ export function CategoryBar() {
   }
 
   return (
-    <nav aria-label="Product categories" className="flex items-center gap-1 sm:gap-1.5">
+    <nav
+      aria-label="Product categories"
+      className="flex items-center gap-1 sm:gap-1.5"
+    >
       <button
         type="button"
         onClick={scrollLeft}
@@ -103,7 +112,9 @@ export function CategoryBar() {
                 }`}
               >
                 {Icon && <Icon size={20} strokeWidth={2} />}
-                <span className="text-[11px] font-semibold leading-tight sm:text-[12px]">{cat.label}</span>
+                <span className="text-[11px] font-semibold leading-tight sm:text-[12px]">
+                  {cat.slug}
+                </span>
               </Link>
             );
           }
@@ -118,17 +129,27 @@ export function CategoryBar() {
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-shadow duration-200 sm:h-11 sm:w-11"
                 style={{
                   backgroundColor: `${cat.color}1A`,
-                  boxShadow: isActive ? `0 0 0 2px ${cat.color}` : "0 0 0 2px transparent",
+                  boxShadow: isActive
+                    ? `0 0 0 2px ${cat.color}`
+                    : "0 0 0 2px transparent",
                 }}
               >
-                {Icon && <Icon size={18} strokeWidth={2} style={{ color: cat.color }} />}
+                {Icon && (
+                  <Icon
+                    size={18}
+                    strokeWidth={2}
+                    style={{ color: cat.color }}
+                  />
+                )}
               </span>
               <span
                 className={`line-clamp-2 min-h-[28px] text-[11px] leading-tight sm:min-h-[30px] sm:text-[12px] ${
-                  isActive ? "font-semibold text-ink" : "font-medium text-ink-soft"
+                  isActive
+                    ? "font-semibold text-ink"
+                    : "font-medium text-ink-soft"
                 }`}
               >
-                {cat.label}
+                {cat.slug}
               </span>
             </Link>
           );
@@ -157,7 +178,10 @@ export function CategoryBarFallback() {
   return (
     <div className="flex items-center gap-2 py-1">
       {Array.from({ length: 7 }).map((_, i) => (
-        <div key={i} className="h-[74px] w-20 shrink-0 animate-pulse rounded-2xl bg-paper" />
+        <div
+          key={i}
+          className="h-[74px] w-20 shrink-0 animate-pulse rounded-2xl bg-paper"
+        />
       ))}
     </div>
   );
