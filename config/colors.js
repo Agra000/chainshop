@@ -17,6 +17,9 @@
  *               wallet address, on-chain status) so they read as distinct
  *               from regular commerce UI
  *  - danger   -> destructive actions and errors (remove item, cancel)
+ *  - navbar   -> top navigation bar only (logo/search/cart row + the
+ *               category strip beneath it); the rest of every page stays
+ *               on the paper/surface tokens above
  */
 
 module.exports = {
@@ -51,5 +54,11 @@ module.exports = {
     DEFAULT: "#C1443B",
     dark: "#9E362E",
     soft: "#F6DEDC",
+  },
+
+  navbar: {
+    DEFAULT: "#D32F2F",
+    dark: "#B71C1C",
+    soft: "#FBE7E6",
   },
 };

@@ -18,6 +18,7 @@ module.exports = {
         ledger: colors.ledger,
         signal: colors.signal,
         danger: colors.danger,
+        navbar: colors.navbar,
       },
       fontFamily: {
         display: ["var(--font-display)", "sans-serif"],
