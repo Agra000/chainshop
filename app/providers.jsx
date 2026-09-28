@@ -3,12 +3,15 @@
 import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
 import { TransactionProvider } from "@/context/TransactionContext";
+import { ProductProvider } from "@/context/ProductContext";
 
 export function Providers({ children }) {
   return (
     <AuthProvider>
       <CartProvider>
-        <TransactionProvider>{children}</TransactionProvider>
+        <TransactionProvider>
+          <ProductProvider>{children}</ProductProvider>
+        </TransactionProvider>
       </CartProvider>
     </AuthProvider>
   );

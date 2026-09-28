@@ -10,7 +10,9 @@
  *  - paper    -> app background
  *  - surface  -> card / panel background
  *  - border   -> hairlines and dividers
- *  - seal     -> primary brand color, used for main actions (buy, pay, confirm)
+ *  - seal     -> primary brand red, used for main actions (buy, pay, confirm).
+ *               A vivid red kept in the same family as `navbar`/`danger` —
+ *               never orange/brown — so the whole app reads as one red brand.
  *  - ledger   -> secondary brand color, used for trust/success states
  *               (verified escrow, delivered, completed)
  *  - signal   -> reserved for blockchain-specific bits only (gas fee,
@@ -33,9 +35,9 @@ module.exports = {
   border: "#DCE3DC",
 
   seal: {
-    DEFAULT: "#C1651C",
-    dark: "#9C5015",
-    soft: "#F4E4D3",
+    DEFAULT: "#D9362B",
+    dark: "#B02A21",
+    soft: "#FCE4E1",
   },
 
   ledger: {
