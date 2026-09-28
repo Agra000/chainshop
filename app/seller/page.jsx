@@ -15,10 +15,13 @@ import {
   AlertTriangle,
   Loader2,
   X,
+  Boxes,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useProducts } from "@/context/ProductContext";
 import { BackButton } from "@/components/ui/BackButton";
-import { shortenAddress, formatDate } from "@/lib/format";
+import { EmptyState } from "@/components/common/EmptyState";
+import { shortenAddress, formatDate, formatIDR } from "@/lib/format";
 
 /** Inline confirm modal — no extra component file needed. */
 function DeleteStoreModal({ shopName, open, onClose, onConfirm, deleting }) {
@@ -102,6 +105,7 @@ function DeleteStoreModal({ shopName, open, onClose, onConfirm, deleting }) {
 
 export default function SellerDashboardPage() {
   const { user, isSeller, deleteShop, hydrated } = useAuth();
+  const { getSellerProducts } = useProducts();
   const router = useRouter();
 
   const [deleteModal, setDeleteModal] = useState(false);
@@ -115,9 +119,10 @@ export default function SellerDashboardPage() {
   if (!hydrated || !isSeller) return null;
 
   const shop = user.shop;
+  const myProducts = getSellerProducts(user.walletAddress);
 
   const stats = [
-    { label: "Products listed", value: "0", icon: PackagePlus },
+    { label: "Products listed", value: String(myProducts.length), icon: PackagePlus },
     { label: "Orders received", value: "0", icon: BarChart3 },
     { label: "Completed sales", value: "0", icon: ShieldCheck },
   ];
@@ -232,42 +237,78 @@ export default function SellerDashboardPage() {
           </div>
 
           <section className="card p-5 sm:p-6">
-            <h2 className="font-display text-base font-semibold text-ink">
-              Get started
-            </h2>
-            <p className="mt-1 text-sm text-ink-soft">
-              Your shop is open. Product listing, order management, and payout
-              tracking will appear here once the seller backend is wired up to
-              the smart contract.
-            </p>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="font-display text-base font-semibold text-ink">
+                Your products
+              </h2>
+              <Link
+                href="/seller/products/new"
+                className="btn-primary !px-4 !py-2 !text-xs"
+              >
+                <PackagePlus size={14} />
+                Add product
+              </Link>
+            </div>
 
-            <div className="mt-4 flex flex-col gap-2.5">
-              <div className="flex items-start gap-3 rounded-xl border border-dashed border-border p-4">
-                <PackagePlus size={18} className="mt-0.5 shrink-0 text-seal" />
-                <div>
-                  <p className="text-sm font-medium text-ink">
-                    Add your first product
-                  </p>
-                  <p className="mt-0.5 text-xs text-ink-soft">
-                    Product listing UI is coming in the next sprint — connect
-                    your backend to unlock this.
-                  </p>
-                </div>
+            {myProducts.length === 0 ? (
+              <div className="mt-4">
+                <EmptyState
+                  icon={<PackagePlus size={22} />}
+                  title="No products yet"
+                  description="List your first product so buyers can find your shop."
+                  actionLabel="Add your first product"
+                  actionHref="/seller/products/new"
+                />
               </div>
+            ) : (
+              <div className="mt-4 flex flex-col gap-2.5">
+                {myProducts.map((p) => (
+                  <div
+                    key={p.id}
+                    className="flex items-center gap-3 rounded-xl border border-border p-3"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={p.images?.[0]}
+                      alt={p.name}
+                      className="h-14 w-14 shrink-0 rounded-lg object-cover"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-ink">{p.name}</p>
+                      <p className="mt-0.5 text-xs text-ink-soft">
+                        {formatIDR(p.price)} ·{" "}
+                        <span className="inline-flex items-center gap-1">
+                          <Boxes size={11} className="inline" />
+                          {p.stock} in stock
+                        </span>
+                      </p>
+                    </div>
+                    <Link
+                      href={`/seller/products/${p.id}/edit`}
+                      className="btn-secondary shrink-0 !px-3 !py-1.5 !text-xs"
+                    >
+                      <Edit3 size={13} />
+                      Edit
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
 
-              <div className="flex items-start gap-3 rounded-xl border border-dashed border-border p-4">
-                <ShieldCheck size={18} className="mt-0.5 shrink-0 text-ledger" />
-                <div>
-                  <p className="text-sm font-medium text-ink">Escrow payouts</p>
-                  <p className="mt-0.5 text-xs text-ink-soft">
-                    When a buyer confirms delivery, the smart contract
-                    automatically releases funds to{" "}
-                    <span className="font-mono text-signal-dark">
-                      {shortenAddress(shop.payoutWallet, 6)}
-                    </span>
-                    .
-                  </p>
-                </div>
+          <section className="card p-5 sm:p-6">
+            <div className="flex items-start gap-3">
+              <ShieldCheck size={18} className="mt-0.5 shrink-0 text-ledger" />
+              <div>
+                <p className="text-sm font-medium text-ink">Escrow payouts</p>
+                <p className="mt-0.5 text-xs text-ink-soft">
+                  When a buyer confirms delivery, the smart contract
+                  automatically releases funds to{" "}
+                  <span className="font-mono text-signal-dark">
+                    {shortenAddress(shop.payoutWallet, 6)}
+                  </span>
+                  .
+                </p>
               </div>
             </div>
           </section>
