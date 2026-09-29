@@ -1,171 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Store,
   MapPin,
   AlignLeft,
   Wallet,
   CheckCircle2,
-  ArrowRight,
   Loader2,
-  ImagePlus,
-  X,
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { useAuth } from "@/context/AuthContext";
 import { shortenAddress } from "@/lib/format";
-
-/**
- * Payout wallet toggle — two pill halves that swap colour on selection.
- */
-function PayoutToggle({ value, onChange }) {
-  return (
-    <div className="flex overflow-hidden rounded-xl border border-border bg-paper">
-      <button
-        type="button"
-        onClick={() => onChange("own")}
-        className={`flex flex-1 items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
-          value === "own"
-            ? "bg-ledger text-white"
-            : "text-ink-soft hover:text-ink"
-        }`}
-      >
-        <Wallet size={15} />
-        My wallet
-      </button>
-      <button
-        type="button"
-        onClick={() => onChange("other")}
-        className={`flex flex-1 items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
-          value === "other"
-            ? "bg-ledger text-white"
-            : "text-ink-soft hover:text-ink"
-        }`}
-      >
-        <ArrowRight size={15} />
-        Other wallet
-      </button>
-    </div>
-  );
-}
-
-/**
- * Image upload / preview field.
- * Reads the file as a data-URL so it can be stored in localStorage without
- * any backend. Warns when the file is large (> 400 KB) since localStorage
- * space is limited — swap this for a proper upload endpoint later.
- */
-function ShopImageUpload({ value, onChange }) {
-  const inputRef = useRef(null);
-  const [warn, setWarn] = useState(false);
-
-  function handleFile(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setWarn(file.size > 400 * 1024);
-    const reader = new FileReader();
-    reader.onload = () => onChange(reader.result);
-    reader.readAsDataURL(file);
-    // reset input so re-selecting the same file still fires onChange
-    e.target.value = "";
-  }
-
-  function handleDrop(e) {
-    e.preventDefault();
-    const file = e.dataTransfer.files?.[0];
-    if (!file || !file.type.startsWith("image/")) return;
-    setWarn(file.size > 400 * 1024);
-    const reader = new FileReader();
-    reader.onload = () => onChange(reader.result);
-    reader.readAsDataURL(file);
-  }
-
-  function handleClear(e) {
-    e.stopPropagation();
-    onChange(null);
-    setWarn(false);
-  }
-
-  return (
-    <div>
-      <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-ink-soft">
-        <ImagePlus size={12} />
-        Shop photo
-        <span className="ml-auto text-ink-faint">optional</span>
-      </label>
-
-      {/* drop zone / preview */}
-      <div
-        onClick={() => !value && inputRef.current?.click()}
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={handleDrop}
-        className={`relative flex min-h-[120px] w-full items-center justify-center overflow-hidden rounded-xl border-2 transition-all duration-200 ${
-          value
-            ? "border-border"
-            : "cursor-pointer border-dashed border-border hover:border-ledger hover:bg-ledger-soft/30"
-        }`}
-      >
-        {value ? (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={value}
-              alt="Shop preview"
-              className="h-full max-h-48 w-full object-cover"
-            />
-            {/* overlay buttons */}
-            <div className="absolute inset-0 flex items-center justify-center gap-2 bg-ink/30 opacity-0 transition-opacity duration-200 hover:opacity-100">
-              <button
-                type="button"
-                onClick={() => inputRef.current?.click()}
-                className="flex items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 text-xs font-medium text-ink shadow transition-all hover:bg-paper active:scale-95"
-              >
-                <ImagePlus size={13} />
-                Change
-              </button>
-              <button
-                type="button"
-                onClick={handleClear}
-                className="flex items-center gap-1.5 rounded-full bg-danger px-3 py-1.5 text-xs font-medium text-white shadow transition-all hover:bg-danger-dark active:scale-95"
-              >
-                <X size={13} />
-                Remove
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className="flex flex-col items-center gap-2 p-6 text-center">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-paper">
-              <ImagePlus size={20} className="text-ink-faint" />
-            </div>
-            <p className="text-xs font-medium text-ink-soft">
-              Click or drag & drop an image
-            </p>
-            <p className="text-[11px] text-ink-faint">
-              JPG, PNG or WebP · best at 1:1 ratio
-            </p>
-          </div>
-        )}
-      </div>
-
-      {warn && (
-        <p className="mt-1 text-[11px] text-seal-dark">
-          Large image — consider compressing it first so it fits in local
-          storage. Swap for a proper upload endpoint in production.
-        </p>
-      )}
-
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={handleFile}
-      />
-    </div>
-  );
-}
+import { sellerservice } from "@/services/SellerService";
+import { ShopImageUpload } from "./ShopImageUpload";
+import { PayoutToggle } from "./PayoutToggle";
 
 const CITIES = [
   "Jakarta Pusat",
@@ -199,7 +48,7 @@ const EMPTY_FORM = (walletAddress = "") => ({
 });
 
 export function SellerRegistrationModal({ open, onClose }) {
-  const { user, registerSeller } = useAuth();
+  const { user } = useAuth();
 
   const [form, setForm] = useState(EMPTY_FORM(user?.walletAddress));
   const [submitting, setSubmitting] = useState(false);
@@ -214,7 +63,11 @@ export function SellerRegistrationModal({ open, onClose }) {
 
   function set(field) {
     return (val) =>
-      setForm((f) => ({ ...f, [field]: typeof val === "object" && val?.target ? val.target.value : val }));
+      setForm((f) => ({
+        ...f,
+        [field]:
+          typeof val === "object" && val?.target ? val.target.value : val,
+      }));
   }
 
   function handlePayoutModeChange(mode) {
@@ -225,21 +78,36 @@ export function SellerRegistrationModal({ open, onClose }) {
     }));
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     if (!form.shopName.trim()) return;
+
     setSubmitting(true);
-    window.setTimeout(() => {
-      registerSeller({
+    // setErrorMessage("");
+
+    try {
+      // Siapkan payload data
+      const dataPayload = {
         shopName: form.shopName.trim(),
-        shopImage: form.shopImage,
+        image: form.shopImage ?? "",
         shopDescription: form.shopDescription.trim(),
         city: form.city,
-        payoutWallet: form.payoutWallet,
-      });
-      setSubmitting(false);
+        PayoutWalletAddress: form.payoutWallet,
+      };
+      console.log(dataPayload);
+      // Panggil API service. Pastikan user.id tersedia (sesuaikan dengan nama properti id user Anda)
+      const res = await sellerservice.becomeSeller(user.userId, dataPayload);
+
       setDone(true);
-    }, 900);
+
+      // Optional: Anda bisa langsung menutup modal jika berhasil
+      // onClose();
+    } catch (error) {
+      console.error("Error registering seller:", error);
+    } finally {
+      // Matikan status loading terlepas dari berhasil atau gagal
+      setSubmitting(false);
+    }
   }
 
   function handleClose() {
@@ -267,7 +135,11 @@ export function SellerRegistrationModal({ open, onClose }) {
             <span className="font-semibold text-ink">{form.shopName}</span> is
             now live. Start listing products whenever you're ready.
           </p>
-          <button type="button" onClick={handleClose} className="btn-primary mt-2">
+          <button
+            type="button"
+            onClick={handleClose}
+            className="btn-primary mt-2"
+          >
             <Store size={16} />
             Go to my shop dashboard
           </button>
@@ -280,10 +152,15 @@ export function SellerRegistrationModal({ open, onClose }) {
               <Store size={18} />
             </div>
             <div>
-              <h2 id="seller-reg-title" className="font-display text-xl font-semibold text-ink">
+              <h2
+                id="seller-reg-title"
+                className="font-display text-xl font-semibold text-ink"
+              >
                 Open your shop
               </h2>
-              <p className="text-xs text-ink-faint">Takes less than a minute to set up.</p>
+              <p className="text-xs text-ink-faint">
+                Takes less than a minute to set up.
+              </p>
             </div>
           </div>
 
@@ -339,9 +216,13 @@ export function SellerRegistrationModal({ open, onClose }) {
                 className="input-field bg-surface"
                 required
               >
-                <option value="" disabled>Select a city…</option>
+                <option value="" disabled>
+                  Select a city…
+                </option>
                 {CITIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
                 ))}
               </select>
             </div>
@@ -352,7 +233,10 @@ export function SellerRegistrationModal({ open, onClose }) {
                 <Wallet size={12} />
                 Payout wallet
               </label>
-              <PayoutToggle value={form.payoutMode} onChange={handlePayoutModeChange} />
+              <PayoutToggle
+                value={form.payoutMode}
+                onChange={handlePayoutModeChange}
+              />
               <div className="mt-2">
                 <input
                   value={form.payoutWallet}
@@ -379,10 +263,18 @@ export function SellerRegistrationModal({ open, onClose }) {
             </div>
 
             <div className="mt-1 flex gap-3">
-              <button type="button" onClick={handleClose} className="btn-secondary flex-1">
+              <button
+                type="button"
+                onClick={handleClose}
+                className="btn-secondary flex-1"
+              >
                 Cancel
               </button>
-              <button type="submit" disabled={submitting} className="btn-primary flex-1">
+              <button
+                type="submit"
+                disabled={submitting}
+                className="btn-primary flex-1"
+              >
                 {submitting ? (
                   <>
                     <Loader2 size={16} className="animate-spin" />

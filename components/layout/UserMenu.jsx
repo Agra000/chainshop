@@ -16,14 +16,15 @@ import { Avatar } from "@/components/common/Avatar";
 import { SellerRegistrationModal } from "@/components/seller/SellerRegistrationModal";
 
 export function UserMenu() {
-  const { user, isSeller, logout } = useAuth();
+  const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const [sellerModalOpen, setSellerModalOpen] = useState(false);
   const menuRef = useRef(null);
 
   useEffect(() => {
     function onClickOutside(e) {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setOpen(false);
+      if (menuRef.current && !menuRef.current.contains(e.target))
+        setOpen(false);
     }
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
@@ -79,7 +80,7 @@ export function UserMenu() {
             </div>
 
             {/* ── Seller section (shown when registered) ── */}
-            {isSeller && (
+            {user.storeId != "" && (
               <>
                 <div className="px-3.5 pb-1 pt-2">
                   <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-ink-faint">
@@ -94,7 +95,7 @@ export function UserMenu() {
                     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-seal-soft">
                       <Store size={14} className="text-seal-dark" />
                     </div>
-                    <span className="truncate">{user.shop.shopName}</span>
+                    <span className="truncate">{user.storeName}</span>
                   </Link>
                 </div>
                 <div className="mx-3.5 my-1.5 h-px bg-border" />
@@ -116,7 +117,7 @@ export function UserMenu() {
             ))}
 
             {/* ── Join Seller (shown when NOT yet a seller) ── */}
-            {!isSeller && (
+            {user.storeId == "" && (
               <>
                 <div className="mx-3.5 my-1.5 h-px bg-border" />
                 <button

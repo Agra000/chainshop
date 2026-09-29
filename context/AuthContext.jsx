@@ -21,6 +21,7 @@ export function AuthProvider({ children }) {
           name: res.username || "User",
           email: res.email,
           storeId: res.storeId,
+          storeName: res.storeName,
           walletAddress: res.walletAddress,
         }));
         return res;
