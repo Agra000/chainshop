@@ -11,6 +11,36 @@ export function AuthProvider({ children }) {
   const [hydrated, setHydrated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  async function getUserInfo() {
+    try {
+      if (user) {
+        setIsLoading(true);
+        const res = await authService.GetUserInfo(user.userId);
+        setUser((prev) => ({
+          ...prev,
+          name: res.username || "User",
+          email: res.email,
+          storeId: res.storeId,
+          walletAddress: res.walletAddress,
+        }));
+        return res;
+      } else {
+        return;
+      }
+    } catch (error) {
+      console.error("GetUserInfo error:", error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (hydrated && user?.userId) {
+      getUserInfo();
+    }
+  }, [hydrated, user?.userId]);
+
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -84,11 +114,8 @@ export function AuthProvider({ children }) {
       const res = await authService.loginWithWallet(payload);
 
       if (res.status === true) {
-        // console.log("res:", res);
         setUser({
-          name: res.idToken || "ChainShop User",
-          email: res.idToken + "@gmail.com",
-          walletAddress: res.walletAddress,
+          userId: res.userId,
         });
       }
 
@@ -125,7 +152,7 @@ export function AuthProvider({ children }) {
               registeredAt: new Date().toISOString(),
             },
           }
-        : prev
+        : prev,
     );
   }
 
@@ -136,7 +163,7 @@ export function AuthProvider({ children }) {
     setUser((prev) =>
       prev && prev.shop
         ? { ...prev, shop: { ...prev.shop, ...partial } }
-        : prev
+        : prev,
     );
   }
 

@@ -22,4 +22,11 @@ export const authService = {
     const response = await api.post("/Auth/wallet-login", data.walletAddress);
     return response.data;
   },
+
+  GetUserInfo: async (userId) => {
+    const response = await api.get("/Auth/get-user", {
+      params: { userId },
+    });
+    return response.data;
+  },
 };
