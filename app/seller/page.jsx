@@ -12,9 +12,6 @@ import {
   ShieldCheck,
   Edit3,
   Trash2,
-  AlertTriangle,
-  Loader2,
-  X,
   Boxes,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -22,107 +19,54 @@ import { useProducts } from "@/context/ProductContext";
 import { BackButton } from "@/components/ui/BackButton";
 import { EmptyState } from "@/components/common/EmptyState";
 import { shortenAddress, formatDate, formatIDR } from "@/lib/format";
-
-/** Inline confirm modal — no extra component file needed. */
-function DeleteStoreModal({ shopName, open, onClose, onConfirm, deleting }) {
-  if (!open) return null;
-  return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center px-4 animate-fade-in"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="delete-store-title"
-    >
-      {/* backdrop */}
-      <button
-        type="button"
-        aria-label="Close"
-        onClick={deleting ? undefined : onClose}
-        className="absolute inset-0 bg-ink/40 backdrop-blur-[2px]"
-      />
-
-      <div className="relative w-full max-w-sm animate-pop-in rounded-2xl bg-surface p-6 shadow-xl">
-        {!deleting && (
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="icon-btn absolute right-3 top-3"
-          >
-            <X size={17} />
-          </button>
-        )}
-
-        {/* icon */}
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-danger-soft text-danger">
-          <AlertTriangle size={22} />
-        </div>
-
-        <h2
-          id="delete-store-title"
-          className="mt-4 font-display text-lg font-semibold text-ink"
-        >
-          Delete store?
-        </h2>
-        <p className="mt-1.5 text-sm text-ink-soft">
-          <span className="font-semibold text-ink">{shopName}</span> will be
-          permanently removed. You can re-register a new shop anytime, but all
-          shop data and settings will be lost.
-        </p>
-
-        <div className="mt-5 flex gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={deleting}
-            className="btn-secondary flex-1"
-          >
-            Keep store
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={deleting}
-            className="flex flex-1 items-center justify-center gap-2 rounded-full bg-danger px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 ease-out hover:bg-danger-dark hover:shadow-md active:scale-[0.97] disabled:cursor-not-allowed disabled:bg-ink-faint"
-          >
-            {deleting ? (
-              <>
-                <Loader2 size={16} className="animate-spin" />
-                Deleting…
-              </>
-            ) : (
-              <>
-                <Trash2 size={16} />
-                Yes, delete
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+import { sellerservice } from "@/services/SellerService";
+import DeleteStoreModal from "@/components/seller/DeleteStoreModal";
 
 export default function SellerDashboardPage() {
-  const { user, isSeller, deleteShop, hydrated } = useAuth();
+  const { user, deleteShop, hydrated } = useAuth();
   const { getSellerProducts } = useProducts();
   const router = useRouter();
-
+  const [shop, setShop] = useState([]);
   const [deleteModal, setDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  // Redirect buyers who land here directly.
   useEffect(() => {
-    if (hydrated && !isSeller) router.replace("/");
-  }, [hydrated, isSeller, router]);
+    if (!hydrated) return;
 
-  if (!hydrated || !isSeller) return null;
+    if (user === null) {
+      router.replace("/");
+    }
+  }, [hydrated, user, router]);
 
-  const shop = user.shop;
-  const myProducts = getSellerProducts(user.walletAddress);
+  useEffect(() => {
+    if (!user?.storeId) return;
+
+    async function loadData() {
+      const res = await sellerservice.GetSellerInfo(user.storeId);
+      setShop(res);
+    }
+
+    loadData();
+  }, [user?.storeId]);
+
+  const myProducts = getSellerProducts(
+    "0x850774fae78337562f304199600973554e9ffbd7",
+  );
+  // useEffect(() => {
+  //   const fetchData = async () => {
+  //     const res = await services.SellerService.GetSellerInfo(user.id);
+  //     const data = await res.json();
+  //     setShop(data);
+  //   };
+  //   fetchData();
+  // }, []);
 
   const stats = [
-    { label: "Products listed", value: String(myProducts.length), icon: PackagePlus },
+    {
+      label: "Products listed",
+      value: String(myProducts.length),
+      icon: PackagePlus,
+    },
     { label: "Orders received", value: "0", icon: BarChart3 },
     { label: "Completed sales", value: "0", icon: ShieldCheck },
   ];
@@ -274,7 +218,9 @@ export default function SellerDashboardPage() {
                       className="h-14 w-14 shrink-0 rounded-lg object-cover"
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-ink">{p.name}</p>
+                      <p className="truncate text-sm font-medium text-ink">
+                        {p.name}
+                      </p>
                       <p className="mt-0.5 text-xs text-ink-soft">
                         {formatIDR(p.price)} ·{" "}
                         <span className="inline-flex items-center gap-1">

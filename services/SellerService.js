@@ -5,7 +5,12 @@ export const sellerservice = {
     const response = await api.post("/Seller/become-seller", data, {
       params: { userId },
     });
-    console.log(response);
+    return response.data;
+  },
+  GetSellerInfo: async (sellerId) => {
+    const response = await api.post("/Seller/get-info", null, {
+    params: { sellerId },
+  });
     return response.data;
   },
 };
