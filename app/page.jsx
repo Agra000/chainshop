@@ -9,7 +9,6 @@ import { PromoBanner } from "@/components/common/PromoBanner";
 export default function HomePage({ searchParams }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const category = searchParams?.category || "all";
   const query = searchParams?.q || "";
 
@@ -23,7 +22,7 @@ export default function HomePage({ searchParams }) {
     }
 
     loadData();
-  }, [category, query]); // Otomatis re-fetch jika category atau query berubah
+  }, [category, query]);
 
   const heading = query ? `Results for "${query}"` : getCategoryLabel(category);
 

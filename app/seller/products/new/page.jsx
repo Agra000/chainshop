@@ -8,23 +8,36 @@ import { useAuth } from "@/context/AuthContext";
 import { useProducts } from "@/context/ProductContext";
 import { BackButton } from "@/components/ui/BackButton";
 import { ProductForm } from "@/components/seller/ProductForm";
+import { sellerservice } from "@/services/SellerService";
 
 export default function AddProductPage() {
   const { user, isSeller, hydrated } = useAuth();
   const { createProduct } = useProducts();
   const router = useRouter();
+  const [shop, setShop] = useState([]);
 
   const [done, setDone] = useState(false);
   const [lastName, setLastName] = useState("");
   const [formKey, setFormKey] = useState(0);
 
   useEffect(() => {
-    if (hydrated && !isSeller) router.replace("/");
-  }, [hydrated, isSeller, router]);
+    if (!hydrated) return;
 
-  if (!hydrated || !isSeller) return null;
+    if (user === null) {
+      router.replace("/");
+    }
+  }, [hydrated, user, router]);
 
-  const shop = user.shop;
+  useEffect(() => {
+    if (!user?.storeId) return;
+
+    async function loadData() {
+      const res = await sellerservice.GetSellerInfo(user.storeId);
+      setShop(res);
+    }
+
+    loadData();
+  }, [user?.storeId]);
 
   function handleSubmit(values) {
     // Simulated async create — swap for a POST /api/products call once the
@@ -66,7 +79,11 @@ export default function AddProductPage() {
             live in your shop.
           </p>
           <div className="mt-2 flex gap-3">
-            <button type="button" onClick={handleAddAnother} className="btn-secondary">
+            <button
+              type="button"
+              onClick={handleAddAnother}
+              className="btn-secondary"
+            >
               <PackagePlus size={16} />
               Add another
             </button>
