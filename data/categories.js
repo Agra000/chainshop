@@ -1,11 +1,6 @@
 import { categoryService } from "@/services/CategoryService";
+import { LayoutGrid } from "lucide-react";
 
-/**
- * Category list shown in the navbar's bottom row.
- * `slug: "all"` is the default/unfiltered view. `icon` and `color` are
- * cosmetic only (CategoryBar renders every icon at the same size, each
- * tinted with its own `color` so the row reads as distinct departments).
- */
 export const categories = [];
 
 export async function fetchCategories() {
@@ -13,7 +8,7 @@ export async function fetchCategories() {
     const res = await categoryService.GetAllCategory();
     const fetchedData = res.data || [];
     categories.length = 0;
-    categories.push({ slug: "all" }, ...fetchedData);
+    categories.push({ slug: "all", icon: LayoutGrid }, ...fetchedData);
     return categories;
   } catch (err) {
     console.error("Fetch Categories Failed:", err);

@@ -6,6 +6,37 @@ import { useSearchParams } from "next/navigation";
 import { fetchCategories } from "@/data/categories";
 // import { useEffect, useState } from "react"; // 1. Import useState
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  LayoutGrid,
+  Smartphone,
+  Cpu,
+  Shirt,
+  Sparkles,
+  Home,
+  ShoppingBasket,
+  Ticket,
+  Gamepad2,
+  Car,
+  Dumbbell,
+  Baby,
+  BookOpen,
+} from "lucide-react";
+
+export const categoryIconMap = {
+  all: LayoutGrid,
+  smartphone: Smartphone,
+  electronics: Cpu,
+  fashion: Shirt,
+  beauty: Sparkles,
+  home: Home,
+  groceries: ShoppingBasket,
+  ticket: Ticket,
+  gaming: Gamepad2,
+  automotive: Car,
+  sports: Dumbbell,
+  baby: Baby,
+  books: BookOpen,
+};
 
 export function CategoryBar() {
   const searchParams = useSearchParams();
@@ -100,7 +131,7 @@ export function CategoryBar() {
       >
         {categories.map((cat) => {
           const isActive = cat.slug === activeCategory;
-          const Icon = cat.icon;
+          const Icon = categoryIconMap[cat.slug] || LayoutGrid;
 
           if (cat.slug === "all") {
             return (
