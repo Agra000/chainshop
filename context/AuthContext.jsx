@@ -193,6 +193,7 @@ export function AuthProvider({ children }) {
         updateShop,
         deleteShop,
         hydrated,
+        getUserInfo,
       }}
     >
       {children}
