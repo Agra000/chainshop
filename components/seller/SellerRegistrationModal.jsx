@@ -48,7 +48,7 @@ const EMPTY_FORM = (walletAddress = "") => ({
 });
 
 export function SellerRegistrationModal({ open, onClose }) {
-  const { user } = useAuth();
+  const { user, getUserInfo } = useAuth();
 
   const [form, setForm] = useState(EMPTY_FORM(user?.walletAddress));
   const [submitting, setSubmitting] = useState(false);
@@ -94,14 +94,11 @@ export function SellerRegistrationModal({ open, onClose }) {
         city: form.city,
         PayoutWalletAddress: form.payoutWallet,
       };
-      console.log(dataPayload);
       // Panggil API service. Pastikan user.id tersedia (sesuaikan dengan nama properti id user Anda)
-      const res = await sellerservice.becomeSeller(user.userId, dataPayload);
+      await sellerservice.becomeSeller(user.userId, dataPayload);
+      await getUserInfo();
 
       setDone(true);
-
-      // Optional: Anda bisa langsung menutup modal jika berhasil
-      // onClose();
     } catch (error) {
       console.error("Error registering seller:", error);
     } finally {
