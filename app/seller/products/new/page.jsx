@@ -10,6 +10,7 @@ import { BackButton } from "@/components/ui/BackButton";
 import { ProductForm } from "@/components/seller/ProductForm";
 import { sellerservice } from "@/services/SellerService";
 import { getApiErrorMessage } from "@/lib/axios";
+import { deleteImage, uploadImageIfNeeded } from "@/lib/upload";
 
 export default function AddProductPage() {
   const { user, isSeller, hydrated } = useAuth();
@@ -41,11 +42,16 @@ export default function AddProductPage() {
   }, [user?.storeId]);
 
   async function handleSubmit(values) {
+    let image = { url: "", uploaded: false };
     try {
-      await createProduct(user.storeId, values);
+      // upload foto produk ke storage baru saat tombol "List product" ditekan
+      image = await uploadImageIfNeeded(user.userId, "products", values.images?.[0]);
+      await createProduct(user.storeId, { ...values, images: [image.url] });
       setLastName(values.name);
       setDone(true);
     } catch (error) {
+      // simpan produk gagal -> jangan tinggalkan file yatim di storage
+      if (image.uploaded) await deleteImage(user.userId, image.url);
       alert(getApiErrorMessage(error, "Failed to list product."));
     }
   }

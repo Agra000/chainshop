@@ -3,23 +3,25 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle2, Save } from "lucide-react";
+import { CheckCircle2, Save, Trash2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useProducts } from "@/context/ProductContext";
 import { BackButton } from "@/components/ui/BackButton";
 import { ProductForm } from "@/components/seller/ProductForm";
 import { fetchCategories, getCategoryByName } from "@/data/categories";
 import { getApiErrorMessage } from "@/lib/axios";
+import { deleteImage, uploadImageIfNeeded } from "@/lib/upload";
 
 export default function EditProductPage() {
   const { id } = useParams();
   const { user, isSeller, hydrated } = useAuth();
-  const { getProduct, updateProduct } = useProducts();
+  const { getProduct, updateProduct, deleteProduct } = useProducts();
   const router = useRouter();
 
   const [done, setDone] = useState(false);
   const [product, setProduct] = useState(null);
   const [loaded, setLoaded] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -44,12 +46,30 @@ export default function EditProductPage() {
   if (!hydrated || !loaded || !isSeller || !product || !ownsProduct) return null;
 
   async function handleSubmit(values) {
+    let image = { url: "", uploaded: false };
     try {
-      await updateProduct(user.storeId, product.id, values);
-      setProduct((prev) => ({ ...prev, ...values }));
+      // foto baru diupload saat "Save changes"; foto lama (URL) tidak diupload ulang.
+      // Jika foto diganti, backend menghapus file lama di storage.
+      image = await uploadImageIfNeeded(user.userId, "products", values.images?.[0]);
+      const payload = { ...values, images: [image.url] };
+      await updateProduct(user.storeId, product.id, payload);
+      setProduct((prev) => ({ ...prev, ...payload }));
       setDone(true);
     } catch (error) {
+      if (image.uploaded) await deleteImage(user.userId, image.url);
       alert(getApiErrorMessage(error, "Failed to save product."));
+    }
+  }
+
+  async function handleDelete() {
+    if (!window.confirm(`Delete "${product.name}"? Its photo will also be removed from storage.`)) return;
+    setDeleting(true);
+    try {
+      await deleteProduct(user.storeId, product.id);
+      router.replace("/seller");
+    } catch (error) {
+      alert(getApiErrorMessage(error, "Failed to delete product."));
+      setDeleting(false);
     }
   }
 
@@ -110,6 +130,24 @@ export default function EditProductPage() {
             submitIcon={Save}
             cancelHref="/seller"
           />
+
+          <section className="card mt-4 border-danger/20 p-4">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-danger">
+              Danger zone
+            </p>
+            <p className="mb-3 text-xs text-ink-soft">
+              Deleting removes this product from your shop and its photo from storage.
+            </p>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-danger/30 bg-danger-soft py-2 text-sm font-medium text-danger transition-all duration-200 hover:border-danger hover:bg-danger hover:text-white active:scale-[0.97]"
+            >
+              <Trash2 size={15} />
+              {deleting ? "Deleting…" : "Delete product"}
+            </button>
+          </section>
         </>
       )}
     </div>

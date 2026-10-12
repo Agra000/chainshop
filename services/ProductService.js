@@ -39,4 +39,12 @@ export const productService = {
     });
     return response.data;
   },
+
+  // gambar produk di storage ikut dihapus oleh backend
+  DeleteProduct: async (sellerId, productId) => {
+    const response = await api.delete("/Product/delete", {
+      params: { sellerId, productId },
+    });
+    return response.data;
+  },
 };

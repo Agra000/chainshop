@@ -118,8 +118,7 @@ function ProductImageUpload({ value, onChange, error }) {
 
       {warn && (
         <p className="mt-1 text-[11px] text-seal-dark">
-          Large image — consider compressing it first so it fits in local
-          storage. Swap for a proper upload endpoint in production.
+          Large image — it will be uploaded when you submit the form (max 5 MB).
         </p>
       )}
       {error && (

@@ -13,10 +13,11 @@ import { Modal } from "@/components/ui/Modal";
 import { useAuth } from "@/context/AuthContext";
 import { shortenAddress } from "@/lib/format";
 import { sellerservice } from "@/services/SellerService";
+import { deleteImage, uploadImageIfNeeded } from "@/lib/upload";
 import { ShopImageUpload } from "./ShopImageUpload";
 import { PayoutToggle } from "./PayoutToggle";
 
-const CITIES = [
+export const CITIES = [
   "Jakarta Pusat",
   "Jakarta Selatan",
   "Jakarta Barat",
@@ -85,11 +86,15 @@ export function SellerRegistrationModal({ open, onClose }) {
     setSubmitting(true);
     // setErrorMessage("");
 
+    let shopImage = { url: "", uploaded: false };
     try {
+      // upload foto toko ke storage baru saat tombol submit ditekan
+      shopImage = await uploadImageIfNeeded(user.userId, "shops", form.shopImage);
+
       // Siapkan payload data
       const dataPayload = {
         shopName: form.shopName.trim(),
-        image: form.shopImage ?? "",
+        image: shopImage.url,
         shopDescription: form.shopDescription.trim(),
         city: form.city,
         PayoutWalletAddress: form.payoutWallet,
@@ -97,6 +102,7 @@ export function SellerRegistrationModal({ open, onClose }) {
       // Panggil API service. Pastikan user.id tersedia (sesuaikan dengan nama properti id user Anda)
       const res = await sellerservice.becomeSeller(user.userId, dataPayload);
       if (!res.status) {
+        if (shopImage.uploaded) await deleteImage(user.userId, shopImage.url);
         alert(res.message);
         return;
       }
@@ -105,6 +111,8 @@ export function SellerRegistrationModal({ open, onClose }) {
       setDone(true);
     } catch (error) {
       console.error("Error registering seller:", error);
+      if (shopImage.uploaded) await deleteImage(user.userId, shopImage.url);
+      alert(error.message || "Failed to open shop.");
     } finally {
       // Matikan status loading terlepas dari berhasil atau gagal
       setSubmitting(false);

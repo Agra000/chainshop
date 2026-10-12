@@ -59,6 +59,13 @@ export function ProductProvider({ children }) {
     return res;
   }
 
+  async function deleteProduct(sellerId, id) {
+    const res = await productService.DeleteProduct(sellerId, id);
+    if (!res.status) throw new Error(res.message);
+    await loadSellerProducts(sellerId);
+    return res;
+  }
+
   async function getProduct(id) {
     return getProductById(id);
   }
@@ -73,6 +80,7 @@ export function ProductProvider({ children }) {
         products,
         createProduct,
         updateProduct,
+        deleteProduct,
         getProduct,
         getSellerProducts,
         loadSellerProducts,
