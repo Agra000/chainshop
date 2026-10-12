@@ -9,18 +9,21 @@ import { OrderCard } from "@/components/transaction/OrderCard";
 import { EmptyState } from "@/components/common/EmptyState";
 
 export default function HistoryPage() {
-  const { completed, hydrated } = useTransactions();
+  const { completed, cancelled, hydrated } = useTransactions();
   const [query, setQuery] = useState("");
 
+  // order selesai + order yang dibatalkan
+  const history = useMemo(() => [...completed, ...cancelled], [completed, cancelled]);
+
   const filtered = useMemo(() => {
-    if (!query.trim()) return completed;
+    if (!query.trim()) return history;
     const q = query.trim().toLowerCase();
-    return completed.filter(
+    return history.filter(
       (tx) =>
-        tx.id.toLowerCase().includes(q) ||
-        tx.items.some((it) => it.name.toLowerCase().includes(q))
+        (tx.code ?? tx.id).toLowerCase().includes(q) ||
+        tx.items.some((it) => it.name?.toLowerCase().includes(q))
     );
-  }, [completed, query]);
+  }, [history, query]);
 
   const totalSpent = useMemo(
     () => completed.reduce((sum, tx) => sum + tx.total, 0),
@@ -34,7 +37,7 @@ export default function HistoryPage() {
       <BackButton />
       <h1 className="mb-4 mt-1 font-display text-xl font-semibold text-ink">Order History</h1>
 
-      {completed.length === 0 ? (
+      {history.length === 0 ? (
         <EmptyState
           icon={<HistoryIcon size={26} />}
           title="No completed orders yet"

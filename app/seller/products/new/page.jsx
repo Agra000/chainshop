@@ -9,6 +9,7 @@ import { useProducts } from "@/context/ProductContext";
 import { BackButton } from "@/components/ui/BackButton";
 import { ProductForm } from "@/components/seller/ProductForm";
 import { sellerservice } from "@/services/SellerService";
+import { getApiErrorMessage } from "@/lib/axios";
 
 export default function AddProductPage() {
   const { user, isSeller, hydrated } = useAuth();
@@ -39,22 +40,14 @@ export default function AddProductPage() {
     loadData();
   }, [user?.storeId]);
 
-  function handleSubmit(values) {
-    // Simulated async create — swap for a POST /api/products call once the
-    // Postgres-backed API branch is merged in.
-    return new Promise((resolve) => {
-      window.setTimeout(() => {
-        createProduct({
-          ...values,
-          seller: shop.shopName,
-          sellerWallet: user.walletAddress,
-          location: shop.city || "",
-        });
-        setLastName(values.name);
-        setDone(true);
-        resolve();
-      }, 700);
-    });
+  async function handleSubmit(values) {
+    try {
+      await createProduct(user.storeId, values);
+      setLastName(values.name);
+      setDone(true);
+    } catch (error) {
+      alert(getApiErrorMessage(error, "Failed to list product."));
+    }
   }
 
   function handleAddAnother() {

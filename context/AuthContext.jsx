@@ -1,7 +1,16 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { authService } from "@/services/AuthService";
+import { sellerservice } from "@/services/SellerService";
+import { getApiErrorMessage } from "@/lib/axios";
+import {
+  clearToken,
+  getTokenUserId,
+  isTokenValid,
+  setToken,
+  SESSION_EXPIRED_EVENT,
+} from "@/lib/session";
 
 const AuthContext = createContext(null);
 const STORAGE_KEY = "chainshop_user";
@@ -11,15 +20,27 @@ export function AuthProvider({ children }) {
   const [hydrated, setHydrated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  async function getUserInfo() {
+  const logout = useCallback(() => {
+    clearToken();
+    setUser(null);
+  }, []);
+
+  async function getUserInfo(userId = user?.userId) {
     try {
-      if (user) {
+      if (userId) {
         setIsLoading(true);
-        const res = await authService.GetUserInfo(user.userId);
+        const res = await authService.GetUserInfo(userId);
+        if (!res.status) return res;
+
         setUser((prev) => ({
           ...prev,
+          userId,
           name: res.username || "User",
           email: res.email,
+          phone: res.phone,
+          city: res.city,
+          authMethod: res.authMethod,
+          joinedAt: prev?.joinedAt || res.lastLoginAt || new Date().toISOString(),
           storeId: res.storeId,
           storeName: res.storeName,
           walletAddress: res.walletAddress,
@@ -38,14 +59,20 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     if (hydrated && user?.userId) {
-      getUserInfo();
+      getUserInfo().catch(() => {});
     }
   }, [hydrated, user?.userId]);
 
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) setUser(JSON.parse(raw));
+      const stored = raw ? JSON.parse(raw) : null;
+      // user hanya dianggap login jika JWT di cookie masih valid & milik user yang sama
+      if (stored && isTokenValid() && getTokenUserId() === stored.userId) {
+        setUser(stored);
+      } else {
+        clearToken();
+      }
     } catch (e) {
       // ignore corrupted storage
     }
@@ -62,31 +89,59 @@ export function AuthProvider({ children }) {
     }
   }, [user, hydrated]);
 
+  // token expired / 401 dari backend -> logout otomatis
+  useEffect(() => {
+    function handleExpired() {
+      setUser(null);
+    }
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handleExpired);
+  }, []);
+
+  function startSession(res) {
+    setToken(res.token, res.expiresAt);
+    setUser({
+      userId: res.userId,
+      email: res.email,
+      walletAddress: res.walletAddress,
+      joinedAt: new Date().toISOString(),
+    });
+  }
+
   // 1. Fungsi Login Berbasis Email / Auth Biasa
-  async function login({ email, password, name }) {
+  // mode "signup" akan register dulu, lalu langsung login
+  async function login({ email, password, name, mode = "login" }) {
     try {
       setIsLoading(true);
 
       const payload = {
         email: email?.trim(),
-        password: password, // jika backend menggunakan password
+        password: password ?? "", // jika backend menggunakan password
         name: name?.trim() || "ChainShop User",
       };
 
+      if (mode === "signup") {
+        const reg = await authService.register(payload);
+        if (!reg.status) {
+          alert(reg.message);
+          return reg;
+        }
+      }
+
       // Tembak ke API login backend
       const res = await authService.login(payload);
+      if (!res.status) {
+        alert(res.message);
+        return res;
+      }
 
-      // Simpan user dari database ke state
-      setUser({
-        ...res.user,
-        avatarSeed: res.user.email || `${Date.now()}`,
-        joinedAt: res.user.createdAt || new Date().toISOString(),
-      });
+      // Simpan session (JWT) + user dari database ke state
+      startSession(res);
 
       return res;
     } catch (error) {
       console.error("Email login error:", error);
-      alert(error?.response?.data?.message || "Gagal melakukan login.");
+      alert(getApiErrorMessage(error, "Gagal melakukan login."));
       throw error;
     } finally {
       setIsLoading(false);
@@ -115,68 +170,76 @@ export function AuthProvider({ children }) {
       const res = await authService.loginWithWallet(payload);
 
       if (res.status === true) {
-        setUser({
-          userId: res.userId,
-        });
+        startSession({ ...res, walletAddress });
+      } else {
+        alert(res.message);
       }
 
-      // return res;
-      return;
+      return res;
     } catch (error) {
       console.error("Wallet login error:", error);
-      alert(error?.response?.data?.message || "Gagal menghubungkan wallet.");
+      alert(getApiErrorMessage(error, "Gagal menghubungkan wallet."));
       throw error;
     } finally {
       setIsLoading(false);
     }
   }
 
-  function logout() {
-    setUser(null);
-  }
-
-  function updateProfile(partial) {
-    setUser((prev) => (prev ? { ...prev, ...partial } : prev));
+  // update profile ke backend (name, email, phone, city)
+  async function updateProfile(partial) {
+    if (!user) return;
+    try {
+      const res = await authService.UpdateProfile(user.userId, {
+        name: partial.name ?? user.name,
+        email: partial.email ?? user.email,
+        phone: partial.phone ?? user.phone,
+        city: partial.city ?? user.city,
+      });
+      if (!res.status) {
+        alert(res.message);
+        return res;
+      }
+      await getUserInfo();
+      return res;
+    } catch (error) {
+      alert(getApiErrorMessage(error, "Gagal menyimpan profile."));
+      throw error;
+    }
   }
 
   /**
    * Register the current user as a seller.
-   * `shopData` shape: { shopName, shopSlug, shopDescription, city, payoutWallet }
+   * `shopData` shape: { shopName, image, shopDescription, city, payoutWalletAddress }
    */
-  function registerSeller(shopData) {
-    setUser((prev) =>
-      prev
-        ? {
-            ...prev,
-            shop: {
-              ...shopData,
-              registeredAt: new Date().toISOString(),
-            },
-          }
-        : prev,
-    );
+  async function registerSeller(shopData) {
+    const res = await sellerservice.becomeSeller(user.userId, shopData);
+    if (res.status) await getUserInfo();
+    return res;
   }
 
   /**
-   * Update an existing seller's shop details (same shape as registerSeller).
+   * Re-fetch shop info after the seller edits it.
    */
-  function updateShop(partial) {
-    setUser((prev) =>
-      prev && prev.shop
-        ? { ...prev, shop: { ...prev.shop, ...partial } }
-        : prev,
-    );
+  async function updateShop() {
+    return getUserInfo();
   }
 
   /**
    * Permanently delete the seller's shop, reverting the user back to a
    * regular buyer. Equivalent to "unregister seller".
    */
-  function deleteShop() {
-    setUser((prev) => (prev ? { ...prev, shop: null } : prev));
+  async function deleteShop() {
+    if (!user?.storeId) return;
+    const res = await sellerservice.DeleteStore(user.storeId);
+    if (!res.status) {
+      alert(res.message);
+      return res;
+    }
+    setUser((prev) => (prev ? { ...prev, storeId: "", storeName: "" } : prev));
+    return res;
   }
 
-  const isSeller = !!user?.shop;
+  const isSeller = !!user?.storeId;
 
   return (
     <AuthContext.Provider

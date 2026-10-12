@@ -7,10 +7,25 @@ export const sellerservice = {
     });
     return response.data;
   },
+
   GetSellerInfo: async (sellerId) => {
     const response = await api.post("/Seller/get-info", null, {
-    params: { sellerId },
-  });
+      params: { sellerId },
+    });
+    return response.data;
+  },
+
+  GetSellerDashboard: async (sellerId) => {
+    const response = await api.get("/Seller/dashboard", {
+      params: { sellerId },
+    });
+    return response.data;
+  },
+
+  DeleteStore: async (sellerId) => {
+    const response = await api.delete("/Seller/delete", {
+      params: { sellerId },
+    });
     return response.data;
   },
 };

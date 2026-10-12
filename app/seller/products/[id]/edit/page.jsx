@@ -8,6 +8,8 @@ import { useAuth } from "@/context/AuthContext";
 import { useProducts } from "@/context/ProductContext";
 import { BackButton } from "@/components/ui/BackButton";
 import { ProductForm } from "@/components/seller/ProductForm";
+import { fetchCategories, getCategoryByName } from "@/data/categories";
+import { getApiErrorMessage } from "@/lib/axios";
 
 export default function EditProductPage() {
   const { id } = useParams();
@@ -16,28 +18,39 @@ export default function EditProductPage() {
   const router = useRouter();
 
   const [done, setDone] = useState(false);
+  const [product, setProduct] = useState(null);
+  const [loaded, setLoaded] = useState(false);
 
-  const product = hydrated ? getProduct(id) : null;
-  const ownsProduct = product && product.sellerWallet === user?.walletAddress;
+  useEffect(() => {
+    if (!hydrated) return;
+
+    async function loadData() {
+      const [data] = await Promise.all([getProduct(id), fetchCategories()]);
+      setProduct(data);
+      setLoaded(true);
+    }
+
+    loadData();
+  }, [hydrated, id]);
+
+  const ownsProduct = product && product.sellerId === user?.storeId;
 
   // Redirect buyers, non-owners, and unknown product ids straight back.
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || !loaded) return;
     if (!isSeller || !product || !ownsProduct) router.replace("/seller");
-  }, [hydrated, isSeller, product, ownsProduct, router]);
+  }, [hydrated, loaded, isSeller, product, ownsProduct, router]);
 
-  if (!hydrated || !isSeller || !product || !ownsProduct) return null;
+  if (!hydrated || !loaded || !isSeller || !product || !ownsProduct) return null;
 
-  function handleSubmit(values) {
-    // Simulated async update — swap for a PATCH /api/products/:id call once
-    // the Postgres-backed API branch is merged in.
-    return new Promise((resolve) => {
-      window.setTimeout(() => {
-        updateProduct(product.id, values);
-        setDone(true);
-        resolve();
-      }, 700);
-    });
+  async function handleSubmit(values) {
+    try {
+      await updateProduct(user.storeId, product.id, values);
+      setProduct((prev) => ({ ...prev, ...values }));
+      setDone(true);
+    } catch (error) {
+      alert(getApiErrorMessage(error, "Failed to save product."));
+    }
   }
 
   return (
@@ -85,7 +98,7 @@ export default function EditProductPage() {
           <ProductForm
             initialValues={{
               name: product.name,
-              category: product.category,
+              category: getCategoryByName(product.category)?.slug ?? "",
               price: String(product.price),
               stock: String(product.stock),
               description: product.description,

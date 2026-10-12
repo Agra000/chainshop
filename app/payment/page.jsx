@@ -1,11 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Fuel, Info, PackageOpen, ShieldCheck, Truck } from "lucide-react";
+import { Fuel, Info, MapPin, PackageOpen, ShieldCheck, Truck, Wallet } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useTransactions } from "@/context/TransactionContext";
+import { addressService } from "@/services/AddressService";
+import { getApiErrorMessage } from "@/lib/axios";
 import { formatIDR, estimateGasFeeIDR } from "@/lib/format";
 import { BackButton } from "@/components/ui/BackButton";
 import { EmptyState } from "@/components/common/EmptyState";
@@ -14,12 +17,56 @@ import { ConfirmPaymentModal } from "@/components/payment/ConfirmPaymentModal";
 
 export default function PaymentPage() {
   const router = useRouter();
+  const { user, isLoggedIn } = useAuth();
   const { selectedItems, checkoutSelected, hydrated } = useCart();
   const { createTransaction } = useTransactions();
 
   const [method, setMethod] = useState(PAYMENT_METHODS[0].id);
   const [modalOpen, setModalOpen] = useState(false);
   const [processing, setProcessing] = useState(false);
+
+  // alamat pengiriman (MsAddresses)
+  const [addresses, setAddresses] = useState([]);
+  const [addressId, setAddressId] = useState("");
+  const [addressForm, setAddressForm] = useState({
+    recipientName: "",
+    phone: "",
+    fullAddress: "",
+    city: "",
+    province: "",
+    postalCode: "",
+  });
+  const [savingAddress, setSavingAddress] = useState(false);
+
+  async function loadAddresses() {
+    if (!user?.userId) return;
+    const res = await addressService.GetAddresses(user.userId);
+    const data = res.data || [];
+    setAddresses(data);
+    setAddressId((prev) => prev || data.find((a) => a.isDefault)?.id || data[0]?.id || "");
+  }
+
+  useEffect(() => {
+    loadAddresses().catch(() => {});
+  }, [user?.userId]);
+
+  async function handleSaveAddress(e) {
+    e.preventDefault();
+    setSavingAddress(true);
+    try {
+      const res = await addressService.UpsertAddress(user.userId, { ...addressForm, isDefault: true });
+      if (!res.status) {
+        alert(res.message);
+        return;
+      }
+      setAddressId("");
+      await loadAddresses();
+    } catch (error) {
+      alert(getApiErrorMessage(error, "Failed to save address."));
+    } finally {
+      setSavingAddress(false);
+    }
+  }
 
   const subtotal = useMemo(
     () => selectedItems.reduce((sum, it) => sum + it.qty * it.price, 0),
@@ -32,27 +79,54 @@ export default function PaymentPage() {
 
   const methodLabel = PAYMENT_METHODS.find((m) => m.id === method)?.label ?? "";
 
-  function handleConfirm() {
+  async function handleConfirm() {
+    if (!addressId) {
+      alert("Please add a shipping address first.");
+      setModalOpen(false);
+      return;
+    }
+
     setProcessing(true);
-    // Simulated confirmation delay — this is where a real escrow contract
-    // call (deposit + lock funds) would be awaited instead.
-    window.setTimeout(() => {
-      const purchased = checkoutSelected();
-      const tx = createTransaction({
-        items: purchased,
-        subtotal,
+    try {
+      // checkout -> escrow hold (onchain) -> verifikasi pembayaran di backend
+      const tx = await createTransaction({
+        items: selectedItems,
+        addressId,
         shippingFee,
         gasFee,
-        total,
-        paymentMethod: methodLabel,
+        paymentMethod: method,
+        paymentMethodLabel: methodLabel,
       });
-      setProcessing(false);
+      await checkoutSelected();
       setModalOpen(false);
-      router.push(`/transaction/${tx.id}`);
-    }, 1100);
+      router.push(tx.orders.length > 1 ? "/transaction" : `/transaction/${tx.id}`);
+    } catch (error) {
+      await checkoutSelected();
+      alert(getApiErrorMessage(error, "Payment failed."));
+      setModalOpen(false);
+    } finally {
+      setProcessing(false);
+    }
   }
 
   if (!hydrated) return null;
+
+  if (!isLoggedIn) {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-4 sm:px-6 lg:px-8">
+        <BackButton fallbackHref="/cart" />
+        <div className="mt-3">
+          <EmptyState
+            icon={<Wallet size={26} />}
+            title="You're not logged in"
+            description="Log in from the navbar to continue to payment."
+            actionLabel="Back to cart"
+            actionHref="/cart"
+          />
+        </div>
+      </div>
+    );
+  }
 
   if (selectedItems.length === 0) {
     return (
@@ -99,6 +173,49 @@ export default function PaymentPage() {
                 </p>
               </div>
             ))}
+          </div>
+
+          <div className="mt-4 border-t border-border pt-4">
+            <p className="mb-2 flex items-center gap-1.5 text-sm font-medium text-ink">
+              <MapPin size={15} className="text-ink-soft" />
+              Shipping address
+            </p>
+            {addresses.length > 0 ? (
+              <select
+                value={addressId}
+                onChange={(e) => setAddressId(e.target.value)}
+                className="input-field bg-surface"
+              >
+                {addresses.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.label} — {a.recipientName}, {a.fullAddress}, {a.city}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <form onSubmit={handleSaveAddress} className="grid gap-2 sm:grid-cols-2">
+                {[
+                  ["recipientName", "Recipient name"],
+                  ["phone", "Phone number"],
+                  ["fullAddress", "Full address"],
+                  ["city", "City"],
+                  ["province", "Province"],
+                  ["postalCode", "Postal code"],
+                ].map(([field, label]) => (
+                  <input
+                    key={field}
+                    value={addressForm[field]}
+                    onChange={(e) => setAddressForm((f) => ({ ...f, [field]: e.target.value }))}
+                    placeholder={label}
+                    className="input-field"
+                    required={field !== "postalCode"}
+                  />
+                ))}
+                <button type="submit" disabled={savingAddress} className="btn-secondary sm:col-span-2">
+                  {savingAddress ? "Saving…" : "Save address"}
+                </button>
+              </form>
+            )}
           </div>
 
           <div className="mt-4 flex items-center gap-2 rounded-xl bg-paper/70 px-4 py-3 text-xs text-ink-soft">
@@ -150,6 +267,7 @@ export default function PaymentPage() {
           <button
             type="button"
             onClick={() => setModalOpen(true)}
+            disabled={!addressId}
             className="btn-primary mt-5 w-full"
           >
             <ShieldCheck size={17} />

@@ -6,8 +6,10 @@ export const categoryService = {
     return response.data;
   },
 
-  AddCategory: async (data) => {
-    const response = await api.post("/Category/add", data);
+  AddCategory: async (userId, data) => {
+    const response = await api.post("/Category/add", data, {
+      params: { userId },
+    });
     return response.data;
   },
 };

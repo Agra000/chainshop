@@ -95,7 +95,11 @@ export function SellerRegistrationModal({ open, onClose }) {
         PayoutWalletAddress: form.payoutWallet,
       };
       // Panggil API service. Pastikan user.id tersedia (sesuaikan dengan nama properti id user Anda)
-      await sellerservice.becomeSeller(user.userId, dataPayload);
+      const res = await sellerservice.becomeSeller(user.userId, dataPayload);
+      if (!res.status) {
+        alert(res.message);
+        return;
+      }
       await getUserInfo();
 
       setDone(true);

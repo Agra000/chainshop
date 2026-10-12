@@ -18,10 +18,11 @@ export function ProductCard({ product }) {
   const { addItem } = useCart();
   const [justAdded, setJustAdded] = useState(false);
 
-  function handleAdd(e) {
+  async function handleAdd(e) {
     e.preventDefault();
     e.stopPropagation();
-    addItem(product, 1);
+    const ok = await addItem(product, 1);
+    if (!ok) return;
     setJustAdded(true);
     window.setTimeout(() => setJustAdded(false), 1200);
   }

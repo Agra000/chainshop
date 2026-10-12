@@ -13,19 +13,19 @@ const STATUS_STYLE = {
   5: "bg-ledger-soft text-ledger-dark",
 };
 
-export function OrderCard({ tx, ctaLabel = "View details" }) {
+export function OrderCard({ tx, ctaLabel = "View details", href }) {
   const visibleThumbs = tx.items.slice(0, 3);
   const extraCount = tx.items.length - visibleThumbs.length;
-  const statusLabel = ORDER_STAGES[tx.stageIndex];
+  const statusLabel = tx.statusLabel ?? ORDER_STAGES[tx.stageIndex];
 
   return (
     <Link
-      href={`/transaction/${tx.id}`}
+      href={href ?? `/transaction/${tx.id}`}
       className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-ink/10 hover:shadow-md sm:p-5"
     >
       <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="text-xs text-ink-faint">{tx.id}</p>
+          <p className="text-xs text-ink-faint">{tx.code ?? tx.id}</p>
           <p className="text-xs text-ink-faint">{formatDate(tx.createdAt)}</p>
         </div>
         <span className={`chip ${STATUS_STYLE[tx.stageIndex]}`}>{statusLabel}</span>

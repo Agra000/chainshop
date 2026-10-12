@@ -15,18 +15,19 @@ import {
   Boxes,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { useProducts } from "@/context/ProductContext";
 import { BackButton } from "@/components/ui/BackButton";
 import { EmptyState } from "@/components/common/EmptyState";
 import { shortenAddress, formatDate, formatIDR } from "@/lib/format";
 import { sellerservice } from "@/services/SellerService";
 import DeleteStoreModal from "@/components/seller/DeleteStoreModal";
+import { mapProduct } from "@/data/products";
+import { getApiErrorMessage } from "@/lib/axios";
 
 export default function SellerDashboardPage() {
   const { user, deleteShop, hydrated } = useAuth();
-  const { getSellerProducts } = useProducts();
   const router = useRouter();
   const [shop, setShop] = useState([]);
+  const [dashboard, setDashboard] = useState(null);
   const [deleteModal, setDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -42,16 +43,18 @@ export default function SellerDashboardPage() {
     if (!user?.storeId) return;
 
     async function loadData() {
-      const res = await sellerservice.GetSellerInfo(user.storeId);
-      setShop(res);
+      const [info, dash] = await Promise.all([
+        sellerservice.GetSellerInfo(user.storeId),
+        sellerservice.GetSellerDashboard(user.storeId),
+      ]);
+      setShop(info);
+      if (dash.status) setDashboard(dash);
     }
 
     loadData();
   }, [user?.storeId]);
 
-  const myProducts = getSellerProducts(
-    "0x850774fae78337562f304199600973554e9ffbd7",
-  );
+  const myProducts = (dashboard?.products || []).map(mapProduct);
   // useEffect(() => {
   //   const fetchData = async () => {
   //     const res = await services.SellerService.GetSellerInfo(user.id);
@@ -67,19 +70,33 @@ export default function SellerDashboardPage() {
       value: String(myProducts.length),
       icon: PackagePlus,
     },
-    { label: "Orders received", value: "0", icon: BarChart3 },
-    { label: "Completed sales", value: "0", icon: ShieldCheck },
+    {
+      label: "Orders received",
+      value: String(dashboard?.totalOrders ?? 0),
+      icon: BarChart3,
+      href: "/seller/orders",
+    },
+    {
+      label: "Completed sales",
+      value: String(dashboard?.completedOrders ?? 0),
+      icon: ShieldCheck,
+      href: "/seller/orders?status=completed",
+    },
   ];
 
-  function handleDeleteConfirm() {
+  async function handleDeleteConfirm() {
     setDeleting(true);
-    // Simulated async delete — swap for contract call later.
-    window.setTimeout(() => {
-      deleteShop();
+    try {
+      const res = await deleteShop();
+      if (res?.status) {
+        setDeleteModal(false);
+        router.replace("/");
+      }
+    } catch (error) {
+      alert(getApiErrorMessage(error, "Failed to delete store."));
+    } finally {
       setDeleting(false);
-      setDeleteModal(false);
-      router.replace("/");
-    }, 900);
+    }
   }
 
   return (
@@ -169,15 +186,26 @@ export default function SellerDashboardPage() {
         {/* ── Stats + quick actions ── */}
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-3 gap-3">
-            {stats.map(({ label, value, icon: Icon }) => (
-              <div key={label} className="card px-4 py-3.5">
-                <Icon size={16} className="mb-2 text-ink-faint" />
-                <p className="font-display text-xl font-semibold text-ink">
-                  {value}
-                </p>
-                <p className="mt-0.5 text-xs text-ink-soft">{label}</p>
-              </div>
-            ))}
+            {stats.map(({ label, value, icon: Icon, href }) => {
+              const content = (
+                <>
+                  <Icon size={16} className="mb-2 text-ink-faint" />
+                  <p className="font-display text-xl font-semibold text-ink">
+                    {value}
+                  </p>
+                  <p className="mt-0.5 text-xs text-ink-soft">{label}</p>
+                </>
+              );
+              return href ? (
+                <Link key={label} href={href} className="card px-4 py-3.5">
+                  {content}
+                </Link>
+              ) : (
+                <div key={label} className="card px-4 py-3.5">
+                  {content}
+                </div>
+              );
+            })}
           </div>
 
           <section className="card p-5 sm:p-6">

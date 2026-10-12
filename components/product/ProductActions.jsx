@@ -15,15 +15,17 @@ export function ProductActions({ product }) {
     return Math.min(Math.max(1, n), product.stock);
   }
 
-  function handleAddToCart() {
-    addItem(product, qty);
+  async function handleAddToCart() {
+    const ok = await addItem(product, qty);
+    if (!ok) return;
     setAdded(true);
     window.setTimeout(() => setAdded(false), 1500);
   }
 
-  function handleBuyNow() {
-    addItem(product, qty);
-    selectOnly(product.id);
+  async function handleBuyNow() {
+    const ok = await addItem(product, qty);
+    if (!ok) return;
+    await selectOnly(product.id);
     router.push("/payment");
   }
 

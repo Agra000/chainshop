@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchProducts, searchProducts } from "@/data/products";
-import { getCategoryLabel } from "@/data/categories";
+import { searchProducts } from "@/data/products";
+import { fetchCategories, getCategoryLabel } from "@/data/categories";
 import { ProductGrid } from "@/components/product/ProductGrid";
 import { PromoBanner } from "@/components/common/PromoBanner";
 
@@ -15,8 +15,10 @@ export default function HomePage({ searchParams }) {
   useEffect(() => {
     async function loadData() {
       setLoading(true);
-      await fetchProducts();
-      const data = await searchProducts({ category, query });
+      const [data] = await Promise.all([
+        searchProducts({ category, query }),
+        fetchCategories(),
+      ]);
       setProducts(data);
       setLoading(false);
     }
