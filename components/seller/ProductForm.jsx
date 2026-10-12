@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Package,
@@ -13,10 +13,8 @@ import {
   X,
   AlertCircle,
 } from "lucide-react";
-import { categories } from "@/data/categories";
+import { fetchCategories } from "@/data/categories";
 import { formatIDR } from "@/lib/format";
-
-const PRODUCT_CATEGORIES = categories.filter((c) => c.slug !== "all");
 
 export const EMPTY_PRODUCT_FORM = {
   name: "",
@@ -120,8 +118,7 @@ function ProductImageUpload({ value, onChange, error }) {
 
       {warn && (
         <p className="mt-1 text-[11px] text-seal-dark">
-          Large image — consider compressing it first so it fits in local
-          storage. Swap for a proper upload endpoint in production.
+          Large image — it will be uploaded when you submit the form (max 5 MB).
         </p>
       )}
       {error && (
@@ -158,6 +155,13 @@ export function ProductForm({
   const [form, setForm] = useState(initialValues);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [productCategories, setProductCategories] = useState([]);
+
+  useEffect(() => {
+    fetchCategories().then((data) =>
+      setProductCategories(data.filter((c) => c.slug !== "all")),
+    );
+  }, []);
 
   function set(field) {
     return (e) => {
@@ -199,15 +203,18 @@ export function ProductForm({
     if (!validate()) return;
 
     setSubmitting(true);
-    await onSubmit({
-      name: form.name.trim(),
-      category: form.category,
-      price: Number(form.price),
-      stock: Number(form.stock),
-      description: form.description.trim(),
-      images: [form.image],
-    });
-    setSubmitting(false);
+    try {
+      await onSubmit({
+        name: form.name.trim(),
+        category: form.category,
+        price: Number(form.price),
+        stock: Number(form.stock),
+        description: form.description.trim(),
+        images: [form.image],
+      });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -249,7 +256,7 @@ export function ProductForm({
           <option value="" disabled>
             Select a category…
           </option>
-          {PRODUCT_CATEGORIES.map((c) => (
+          {productCategories.map((c) => (
             <option key={c.slug} value={c.slug}>
               {c.label}
             </option>

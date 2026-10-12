@@ -8,40 +8,53 @@ import { useAuth } from "@/context/AuthContext";
 import { useProducts } from "@/context/ProductContext";
 import { BackButton } from "@/components/ui/BackButton";
 import { ProductForm } from "@/components/seller/ProductForm";
+import { sellerservice } from "@/services/SellerService";
+import { getApiErrorMessage } from "@/lib/axios";
+import { deleteImage, uploadImageIfNeeded } from "@/lib/upload";
 
 export default function AddProductPage() {
   const { user, isSeller, hydrated } = useAuth();
   const { createProduct } = useProducts();
   const router = useRouter();
+  const [shop, setShop] = useState([]);
 
   const [done, setDone] = useState(false);
   const [lastName, setLastName] = useState("");
   const [formKey, setFormKey] = useState(0);
 
   useEffect(() => {
-    if (hydrated && !isSeller) router.replace("/");
-  }, [hydrated, isSeller, router]);
+    if (!hydrated) return;
 
-  if (!hydrated || !isSeller) return null;
+    // belum login / belum punya toko (storeId "" setelah info user dimuat) -> keluar
+    if (user === null || user.storeId === "") {
+      router.replace("/");
+    }
+  }, [hydrated, user, router]);
 
-  const shop = user.shop;
+  useEffect(() => {
+    if (!user?.storeId) return;
 
-  function handleSubmit(values) {
-    // Simulated async create — swap for a POST /api/products call once the
-    // Postgres-backed API branch is merged in.
-    return new Promise((resolve) => {
-      window.setTimeout(() => {
-        createProduct({
-          ...values,
-          seller: shop.shopName,
-          sellerWallet: user.walletAddress,
-          location: shop.city || "",
-        });
-        setLastName(values.name);
-        setDone(true);
-        resolve();
-      }, 700);
-    });
+    async function loadData() {
+      const res = await sellerservice.GetSellerInfo(user.storeId);
+      setShop(res);
+    }
+
+    loadData();
+  }, [user?.storeId]);
+
+  async function handleSubmit(values) {
+    let image = { url: "", uploaded: false };
+    try {
+      // upload foto produk ke storage baru saat tombol "List product" ditekan
+      image = await uploadImageIfNeeded(user.userId, "products", values.images?.[0]);
+      await createProduct(user.storeId, { ...values, images: [image.url] });
+      setLastName(values.name);
+      setDone(true);
+    } catch (error) {
+      // simpan produk gagal -> jangan tinggalkan file yatim di storage
+      if (image.uploaded) await deleteImage(user.userId, image.url);
+      alert(getApiErrorMessage(error, "Failed to list product."));
+    }
   }
 
   function handleAddAnother() {
@@ -66,7 +79,11 @@ export default function AddProductPage() {
             live in your shop.
           </p>
           <div className="mt-2 flex gap-3">
-            <button type="button" onClick={handleAddAnother} className="btn-secondary">
+            <button
+              type="button"
+              onClick={handleAddAnother}
+              className="btn-secondary"
+            >
               <PackagePlus size={16} />
               Add another
             </button>

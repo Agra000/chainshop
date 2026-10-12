@@ -13,23 +13,31 @@ export function AuthModal({ open, mode, onClose }) {
 
   const title = mode === "signup" ? "Create your account" : "Log in to ChainShop";
 
-  function handleEmailSubmit(e) {
+  async function handleEmailSubmit(e) {
     e.preventDefault();
-    if (!name.trim()) return;
-    login({ name, email });
-    setName("");
-    setEmail("");
-    onClose();
+    if (!name.trim() || !email.trim()) return;
+    try {
+      const res = await login({ name, email, mode });
+      if (res?.status) {
+        setName("");
+        setEmail("");
+        onClose();
+      }
+    } catch (error) {
+      // pesan error sudah ditampilkan di AuthContext
+    }
   }
 
-  function handleWalletConnect() {
+  async function handleWalletConnect() {
     setConnecting(true);
-    // Simulated wallet handshake — swap for a real wagmi/viem connector later.
-    window.setTimeout(() => {
-      loginWithWallet();
+    try {
+      const res = await loginWithWallet();
+      if (res?.status) onClose();
+    } catch (error) {
+      // pesan error sudah ditampilkan di AuthContext
+    } finally {
       setConnecting(false);
-      onClose();
-    }, 700);
+    }
   }
 
   return (
@@ -38,7 +46,7 @@ export function AuthModal({ open, mode, onClose }) {
         {title}
       </h2>
       <p className="mt-1 text-sm text-ink-soft">
-        This is a demo account — no real email or wallet is required.
+        Use your email, or connect your MetaMask wallet.
       </p>
 
       <form onSubmit={handleEmailSubmit} className="mt-5 flex flex-col gap-3">
@@ -57,7 +65,7 @@ export function AuthModal({ open, mode, onClose }) {
         </div>
         <div>
           <label htmlFor="auth-email" className="mb-1 block text-xs font-medium text-ink-soft">
-            Email (optional)
+            Email
           </label>
           <input
             id="auth-email"
@@ -66,6 +74,7 @@ export function AuthModal({ open, mode, onClose }) {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
             className="input-field"
+            required
           />
         </div>
         <button type="submit" className="btn-primary mt-1 w-full">

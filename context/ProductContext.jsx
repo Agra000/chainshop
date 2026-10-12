@@ -1,84 +1,77 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useState } from "react";
+import { productService } from "@/services/ProductService";
+import { fetchCategories, getCategoryBySlug } from "@/data/categories";
+import { getProductById, getSellerProducts as fetchSellerProducts } from "@/data/products";
 
 const ProductContext = createContext(null);
-const STORAGE_KEY = "chainshop_seller_products";
 
-function generateProductId() {
-  return `sp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+// form ProductForm -> FormItemsRequest backend
+async function toProductRequest(data) {
+  await fetchCategories();
+  const category = getCategoryBySlug(data.category);
+  if (!category) throw new Error("Category not found");
+
+  return {
+    name: data.name,
+    categoryId: category.id,
+    priceIdr: data.price,
+    stock: data.stock,
+    description: data.description,
+    image: data.images?.[0] ?? "",
+  };
 }
 
 export function ProductProvider({ children }) {
   const [products, setProducts] = useState([]);
   const [hydrated, setHydrated] = useState(false);
 
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) setProducts(JSON.parse(raw));
-    } catch (e) {
-      // ignore corrupted storage
-    }
+  const loadSellerProducts = useCallback(async (sellerId) => {
+    if (!sellerId) return [];
+    const data = await fetchSellerProducts(sellerId);
+    setProducts(data);
     setHydrated(true);
+    return data;
   }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
-    } catch (e) {
-      // ignore write failures (e.g. private browsing)
-    }
-  }, [products, hydrated]);
 
   /**
    * Create a new product listing.
-   * `data` shape: { name, category, price, stock, description, images,
-   * seller, sellerWallet, location }
-   *
-   * This persists to localStorage for now, standing in for a real backend.
-   * Once the Postgres-backed API is merged, swap the body for a
-   * `POST /api/products` call and keep this same signature so callers
-   * (the add-product page) don't need to change.
+   * `data` shape: { name, category (slug), price, stock, description, images }
    */
-  function createProduct(data) {
-    const now = new Date().toISOString();
-    const product = {
-      id: generateProductId(),
-      rating: 0,
-      sold: 0,
-      createdAt: now,
-      ...data,
-    };
-    setProducts((prev) => [product, ...prev]);
-    return product;
+  async function createProduct(sellerId, data) {
+    const payload = await toProductRequest(data);
+    const res = await productService.AddProduct(sellerId, payload);
+    if (!res.status) throw new Error(res.message);
+    await loadSellerProducts(sellerId);
+    return res;
   }
 
   /**
    * Update an existing product listing (name, category, price, stock,
-   * description, images, ...). Same localStorage-now/API-later story as
-   * `createProduct` — swap the body for a `PATCH /api/products/:id` call
-   * once the backend is merged in.
+   * description, images, ...).
    */
-  function updateProduct(id, data) {
-    setProducts((prev) =>
-      prev.map((p) =>
-        p.id === id ? { ...p, ...data, updatedAt: new Date().toISOString() } : p
-      )
-    );
+  async function updateProduct(sellerId, id, data) {
+    const payload = await toProductRequest(data);
+    const res = await productService.UpdateProduct(sellerId, id, payload);
+    if (!res.status) throw new Error(res.message);
+    await loadSellerProducts(sellerId);
+    return res;
   }
 
-  function deleteProduct(id) {
-    setProducts((prev) => prev.filter((p) => p.id !== id));
+  async function deleteProduct(sellerId, id) {
+    const res = await productService.DeleteProduct(sellerId, id);
+    if (!res.status) throw new Error(res.message);
+    await loadSellerProducts(sellerId);
+    return res;
   }
 
-  function getProduct(id) {
-    return products.find((p) => p.id === id) || null;
+  async function getProduct(id) {
+    return getProductById(id);
   }
 
-  function getSellerProducts(sellerWallet) {
-    return products.filter((p) => p.sellerWallet === sellerWallet);
+  function getSellerProducts() {
+    return products;
   }
 
   return (
@@ -90,6 +83,7 @@ export function ProductProvider({ children }) {
         deleteProduct,
         getProduct,
         getSellerProducts,
+        loadSellerProducts,
         hydrated,
       }}
     >

@@ -20,7 +20,7 @@ export default function ProfilePage() {
         name: user.name || "",
         email: user.email || "",
         phone: user.phone || "",
-        address: user.address || "",
+        address: user.city || "",
       });
     }
   }, [user]);
@@ -48,9 +48,15 @@ export default function ProfilePage() {
     return (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
   }
 
-  function handleSave(e) {
+  async function handleSave(e) {
     e.preventDefault();
-    updateProfile(form);
+    const res = await updateProfile({
+      name: form.name,
+      email: form.email,
+      phone: form.phone,
+      city: form.address,
+    }).catch(() => null);
+    if (!res?.status) return;
     setSaved(true);
     window.setTimeout(() => setSaved(false), 1800);
   }
