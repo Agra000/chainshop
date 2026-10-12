@@ -34,7 +34,8 @@ export default function SellerDashboardPage() {
   useEffect(() => {
     if (!hydrated) return;
 
-    if (user === null) {
+    // belum login / belum punya toko (storeId "" setelah info user dimuat) -> keluar
+    if (user === null || user.storeId === "") {
       router.replace("/");
     }
   }, [hydrated, user, router]);

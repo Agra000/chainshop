@@ -5,7 +5,9 @@ import { authService } from "@/services/AuthService";
 import { sellerservice } from "@/services/SellerService";
 import { getApiErrorMessage } from "@/lib/axios";
 import {
+  clearStoreCookie,
   clearToken,
+  setStoreCookie,
   getTokenUserId,
   isTokenValid,
   setToken,
@@ -22,6 +24,7 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(() => {
     clearToken();
+    clearStoreCookie();
     setUser(null);
   }, []);
 
@@ -92,6 +95,7 @@ export function AuthProvider({ children }) {
   // token expired / 401 dari backend -> logout otomatis
   useEffect(() => {
     function handleExpired() {
+      clearStoreCookie();
       setUser(null);
     }
     window.addEventListener(SESSION_EXPIRED_EVENT, handleExpired);
@@ -238,6 +242,12 @@ export function AuthProvider({ children }) {
     setUser((prev) => (prev ? { ...prev, storeId: "", storeName: "" } : prev));
     return res;
   }
+
+  useEffect(() => {
+    if (!hydrated) return;
+    if (user?.storeId) setStoreCookie(user.storeId);
+    else if (!user || user.storeId === "") clearStoreCookie();
+  }, [hydrated, user, user?.storeId]);
 
   const isSeller = !!user?.storeId;
 
