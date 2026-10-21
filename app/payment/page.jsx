@@ -9,7 +9,7 @@ import { useCart } from "@/context/CartContext";
 import { useTransactions } from "@/context/TransactionContext";
 import { addressService } from "@/services/AddressService";
 import { getApiErrorMessage } from "@/lib/axios";
-import { formatIDR, estimateGasFeeIDR } from "@/lib/format";
+import { formatUSDT, estimateGasFee } from "@/lib/format";
 import { BackButton } from "@/components/ui/BackButton";
 import { EmptyState } from "@/components/common/EmptyState";
 import { PaymentMethodSelector, PAYMENT_METHODS } from "@/components/payment/PaymentMethodSelector";
@@ -73,8 +73,8 @@ export default function PaymentPage() {
     [selectedItems]
   );
   const allDigital = selectedItems.length > 0 && selectedItems.every((it) => it.category === "topup");
-  const shippingFee = allDigital || subtotal === 0 ? 0 : 15000;
-  const gasFee = useMemo(() => estimateGasFeeIDR(subtotal || 0), [subtotal]);
+  const shippingFee = allDigital || subtotal === 0 ? 0 : 1;
+  const gasFee = useMemo(() => estimateGasFee(subtotal || 0), [subtotal]);
   const total = subtotal + shippingFee + gasFee;
 
   const methodLabel = PAYMENT_METHODS.find((m) => m.id === method)?.label ?? "";
@@ -169,7 +169,7 @@ export default function PaymentPage() {
                   <p className="mt-0.5 text-xs text-ink-faint">Qty {item.qty}</p>
                 </div>
                 <p className="whitespace-nowrap text-sm font-semibold text-ink">
-                  {formatIDR(item.qty * item.price)}
+                  {formatUSDT(item.qty * item.price)}
                 </p>
               </div>
             ))}
@@ -232,18 +232,18 @@ export default function PaymentPage() {
           <dl className="mt-3 flex flex-col gap-2.5 text-sm">
             <div className="flex items-center justify-between">
               <dt className="text-ink-soft">Subtotal</dt>
-              <dd className="text-ink">{formatIDR(subtotal)}</dd>
+              <dd className="text-ink">{formatUSDT(subtotal)}</dd>
             </div>
             <div className="flex items-center justify-between">
               <dt className="text-ink-soft">Shipping fee</dt>
-              <dd className="text-ink">{shippingFee === 0 ? "Free" : formatIDR(shippingFee)}</dd>
+              <dd className="text-ink">{shippingFee === 0 ? "Free" : formatUSDT(shippingFee)}</dd>
             </div>
             <div className="flex items-center justify-between">
               <dt className="flex items-center gap-1.5 text-signal-dark">
                 <Fuel size={14} />
                 Blockchain gas fee
               </dt>
-              <dd className="text-ink">{formatIDR(gasFee)}</dd>
+              <dd className="text-ink">{formatUSDT(gasFee)}</dd>
             </div>
             <div className="flex items-start gap-1.5 rounded-lg bg-signal-soft px-3 py-2 text-xs text-signal-dark">
               <Info size={13} className="mt-0.5 shrink-0" />
@@ -256,7 +256,7 @@ export default function PaymentPage() {
 
           <div className="flex items-center justify-between">
             <span className="font-medium text-ink">Total</span>
-            <span className="font-display text-xl font-bold text-ink">{formatIDR(total)}</span>
+            <span className="font-display text-xl font-bold text-ink">{formatUSDT(total)}</span>
           </div>
 
           <div className="mt-5">
@@ -271,7 +271,7 @@ export default function PaymentPage() {
             className="btn-primary mt-5 w-full"
           >
             <ShieldCheck size={17} />
-            Pay {formatIDR(total)}
+            Pay {formatUSDT(total)}
           </button>
         </section>
       </div>

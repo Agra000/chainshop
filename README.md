@@ -52,7 +52,7 @@ lain.
 4. **Cart** — checklist item yang mau dibayar, subtotal muncul di bar bawah
    yang fixed.
 5. **Payment** — ringkasan barang, rincian harga termasuk **gas fee
-   blockchain** (dummy, dihitung dari `estimateGasFeeIDR` di `lib/format.js`),
+   blockchain** (dummy, dihitung dari `estimateGasFee` di `lib/format.js`),
    pilih metode bayar, klik Bayar → modal konfirmasi.
 6. **Transaction** — setelah bayar, order otomatis punya status "Order
    Placed". Karena belum ada integrasi kurir sungguhan, di halaman detail
@@ -72,13 +72,13 @@ Semua titik yang masih dummy sudah ditandai komentar di kode, terutama di:
   on-chain sungguhan).
 - `context/AuthContext.jsx` — fungsi `loginWithWallet` (ganti dengan
   wallet connector asli seperti wagmi/viem/RainbowKit).
-- `lib/format.js` — fungsi `estimateGasFeeIDR` (ganti dengan estimasi gas
-  fee asli dari network yang dipakai, lalu convert ke Rupiah kalau masih
-  mau ditampilkan dalam Rupiah).
+- `lib/format.js` — fungsi `estimateGasFee` (ganti dengan estimasi gas
+  fee asli dari network yang dipakai, lalu convert ke USDT kalau masih
+  mau ditampilkan dalam USDT).
 
 ## Catatan lain
 
-- Harga barang ditampilkan dalam Rupiah (`Intl.NumberFormat("id-ID")`),
+- Harga barang ditampilkan dalam USDT (`formatUSDT`),
   sesuai permintaan — blockchain di sini berperan sebagai lapisan
   escrow/pencatatan transaksi, bukan sebagai mata uang produk.
 - Gambar produk pakai placeholder dari picsum.photos — tinggal ganti URL di

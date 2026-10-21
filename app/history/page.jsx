@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Search, History as HistoryIcon } from "lucide-react";
 import { useTransactions } from "@/context/TransactionContext";
-import { formatIDR } from "@/lib/format";
+import { formatUSDT } from "@/lib/format";
 import { BackButton } from "@/components/ui/BackButton";
 import { OrderCard } from "@/components/transaction/OrderCard";
 import { EmptyState } from "@/components/common/EmptyState";
@@ -55,7 +55,7 @@ export default function HistoryPage() {
             <div className="card px-4 py-3">
               <p className="text-xs text-ink-faint">Total spent</p>
               <p className="font-display text-lg font-semibold text-ink">
-                {formatIDR(totalSpent)}
+                {formatUSDT(totalSpent)}
               </p>
             </div>
           </div>

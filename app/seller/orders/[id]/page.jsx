@@ -19,7 +19,7 @@ import { orderService } from "@/services/OrderService";
 import { courierService } from "@/services/CourierService";
 import { recordInvoice, refundEscrow } from "@/lib/blockchain";
 import { getApiErrorMessage } from "@/lib/axios";
-import { formatDate, formatIDR, shortenAddress } from "@/lib/format";
+import { formatDate, formatUSDT, shortenAddress } from "@/lib/format";
 import { BackButton } from "@/components/ui/BackButton";
 import { EmptyState } from "@/components/common/EmptyState";
 import { TrackingTimeline } from "@/components/transaction/TrackingTimeline";
@@ -325,13 +325,13 @@ export default function SellerOrderDetailPage({ params }) {
                     <p className="line-clamp-1 text-sm text-ink">{item.name}</p>
                     <p className="text-xs text-ink-faint">Qty {item.qty}</p>
                   </div>
-                  <p className="text-sm font-medium text-ink">{formatIDR(item.qty * item.price)}</p>
+                  <p className="text-sm font-medium text-ink">{formatUSDT(item.qty * item.price)}</p>
                 </div>
               ))}
             </div>
             <div className="mt-4 flex justify-between border-t border-border pt-3 text-sm font-medium text-ink">
               <span>Order total</span>
-              <span>{formatIDR(tx.subtotal)}</span>
+              <span>{formatUSDT(tx.subtotal)}</span>
             </div>
             {tx.address && (
               <p className="mt-3 text-xs text-ink-soft">

@@ -17,7 +17,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { BackButton } from "@/components/ui/BackButton";
 import { EmptyState } from "@/components/common/EmptyState";
-import { shortenAddress, formatDate, formatIDR } from "@/lib/format";
+import { shortenAddress, formatDate, formatUSDT } from "@/lib/format";
 import { sellerservice } from "@/services/SellerService";
 import DeleteStoreModal from "@/components/seller/DeleteStoreModal";
 import { mapProduct } from "@/data/products";
@@ -251,7 +251,7 @@ export default function SellerDashboardPage() {
                         {p.name}
                       </p>
                       <p className="mt-0.5 text-xs text-ink-soft">
-                        {formatIDR(p.price)} ·{" "}
+                        {formatUSDT(p.price)} ·{" "}
                         <span className="inline-flex items-center gap-1">
                           <Boxes size={11} className="inline" />
                           {p.stock} in stock

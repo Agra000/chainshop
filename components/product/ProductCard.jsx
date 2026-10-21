@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Plus, Check } from "lucide-react";
 import { useState } from "react";
-import { formatIDR } from "@/lib/format";
+import { formatUSDT } from "@/lib/format";
 import { RatingStars } from "@/components/common/RatingStars";
 import { useCart } from "@/context/CartContext";
 
@@ -59,7 +59,7 @@ export function ProductCard({ product }) {
           {product.name}
         </p>
         <p className="font-display text-base font-semibold text-navbar">
-          {formatIDR(product.price)}
+          {formatUSDT(product.price)}
         </p>
         <div className="mt-auto flex items-center justify-between pt-1">
           <RatingStars rating={product.rating} />
