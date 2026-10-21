@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { useAuth } from "@/context/AuthContext";
-import { shortenAddress } from "@/lib/format";
+import { shortenAddress, isValidWalletAddress } from "@/lib/format";
 
 /**
  * Payout wallet toggle — two pill halves that swap colour on selection.
@@ -204,6 +204,10 @@ export function SellerRegistrationModal({ open, onClose }) {
   const [form, setForm] = useState(EMPTY_FORM(user?.walletAddress));
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [walletTouched, setWalletTouched] = useState(false);
+
+  const walletInvalid = !isValidWalletAddress(form.payoutWallet);
+  const showWalletError = form.payoutMode === "other" && walletTouched && walletInvalid;
 
   // Keep payoutWallet in sync when mode switches to "own"
   useEffect(() => {
@@ -228,6 +232,10 @@ export function SellerRegistrationModal({ open, onClose }) {
   function handleSubmit(e) {
     e.preventDefault();
     if (!form.shopName.trim()) return;
+    if (form.payoutMode === "other" && walletInvalid) {
+      setWalletTouched(true);
+      return;
+    }
     setSubmitting(true);
     window.setTimeout(() => {
       registerSeller({
@@ -356,7 +364,8 @@ export function SellerRegistrationModal({ open, onClose }) {
               <div className="mt-2">
                 <input
                   value={form.payoutWallet}
-                  onChange={set("payoutWallet")}
+                  onChange={(e) => set("payoutWallet")(e.target.value.trim())}
+                  onBlur={() => setWalletTouched(true)}
                   disabled={form.payoutMode === "own"}
                   placeholder="0x..."
                   className={`input-field font-mono text-xs ${
@@ -366,6 +375,11 @@ export function SellerRegistrationModal({ open, onClose }) {
                   }`}
                   required
                 />
+                {showWalletError && (
+                  <p className="mt-1 text-xs text-danger">
+                    Invalid wallet address. It must start with 0x followed by 40 hex characters (0-9, a-f).
+                  </p>
+                )}
                 {form.payoutMode === "own" && user?.walletAddress && (
                   <p className="mt-1 text-xs text-ink-faint">
                     Using{" "}
