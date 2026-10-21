@@ -11,7 +11,7 @@ import {
   LockOpen,
 } from "lucide-react";
 import { useTransactions, ORDER_STAGES } from "@/context/TransactionContext";
-import { formatDate, formatIDR, shortenAddress } from "@/lib/format";
+import { formatDate, shortenAddress } from "@/lib/format";
 import { BackButton } from "@/components/ui/BackButton";
 import { EmptyState } from "@/components/common/EmptyState";
 import { TrackingTimeline } from "@/components/transaction/TrackingTimeline";
@@ -150,7 +150,7 @@ export default function TransactionDetailPage({ params }) {
                     <p className="line-clamp-1 text-sm text-ink">{item.name}</p>
                     <p className="text-xs text-ink-faint">Qty {item.qty}</p>
                   </div>
-                  <p className="text-sm font-medium text-ink">{formatIDR(item.qty * item.price)}</p>
+                  <p className="text-sm font-medium text-ink">{formatUSDT(item.qty * item.price)}</p>
                 </div>
               ))}
             </div>
@@ -158,19 +158,19 @@ export default function TransactionDetailPage({ params }) {
             <div className="mt-4 flex flex-col gap-2 border-t border-border pt-3 text-sm">
               <div className="flex justify-between text-ink-soft">
                 <span>Subtotal</span>
-                <span>{formatIDR(tx.subtotal)}</span>
+                <span>{formatUSDT(tx.subtotal)}</span>
               </div>
               <div className="flex justify-between text-ink-soft">
                 <span>Shipping fee</span>
-                <span>{tx.shippingFee === 0 ? "Free" : formatIDR(tx.shippingFee)}</span>
+                <span>{tx.shippingFee === 0 ? "Free" : formatUSDT(tx.shippingFee)}</span>
               </div>
               <div className="flex justify-between text-ink-soft">
                 <span>Blockchain gas fee</span>
-                <span>{formatIDR(tx.gasFee)}</span>
+                <span>{formatUSDT(tx.gasFee)}</span>
               </div>
               <div className="flex justify-between border-t border-border pt-2 font-medium text-ink">
                 <span>Total paid</span>
-                <span>{formatIDR(tx.total)}</span>
+                <span>{formatUSDT(tx.total)}</span>
               </div>
               <p className="text-xs text-ink-faint">via {tx.paymentMethod}</p>
             </div>

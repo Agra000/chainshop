@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import { formatDate, formatIDR } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { ORDER_STAGES } from "@/context/TransactionContext";
 
 const STATUS_STYLE = {
@@ -49,7 +49,7 @@ export function OrderCard({ tx, ctaLabel = "View details" }) {
       <div className="flex items-center justify-between border-t border-border pt-3">
         <div>
           <p className="text-xs text-ink-faint">Total payment</p>
-          <p className="font-display text-base font-semibold text-ink">{formatIDR(tx.total)}</p>
+          <p className="font-display text-base font-semibold text-ink">{formatUSDT(tx.total)}</p>
         </div>
         <span className="flex items-center gap-1 text-sm font-medium text-seal">
           {ctaLabel}

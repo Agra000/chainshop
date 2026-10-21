@@ -1,12 +1,10 @@
 "use client";
 
-import { Landmark, WalletMinimal, CreditCard, Coins } from "lucide-react";
+import { Coins } from "lucide-react";
 
+// Stablecoin is the only accepted payment method; gas fee is paid by the buyer.
 export const PAYMENT_METHODS = [
-  { id: "bank_transfer", label: "Bank Transfer / Virtual Account", icon: Landmark },
-  { id: "ewallet", label: "E-Wallet Balance", icon: WalletMinimal },
-  { id: "card", label: "Credit / Debit Card", icon: CreditCard },
-  { id: "crypto", label: "Crypto Wallet (USDT / ETH)", icon: Coins },
+  { id: "stablecoin", label: "Stablecoin (USDT)", icon: Coins },
 ];
 
 export function PaymentMethodSelector({ value, onChange }) {

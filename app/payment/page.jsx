@@ -3,10 +3,16 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Fuel, Info, PackageOpen, ShieldCheck, Truck } from "lucide-react";
+import { AlertTriangle, Fuel, Info, LogIn, PackageOpen, ShieldCheck, Truck, Wallet } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useTransactions } from "@/context/TransactionContext";
-import { formatIDR, estimateGasFeeIDR } from "@/lib/format";
+import { useAuth } from "@/context/AuthContext";
+import {
+  formatUSDT,
+  estimateGasFee,
+  DEMO_STABLECOIN_BALANCE,
+} from "@/lib/format";
+import { AuthModal } from "@/components/layout/AuthModal";
 import { BackButton } from "@/components/ui/BackButton";
 import { EmptyState } from "@/components/common/EmptyState";
 import { PaymentMethodSelector, PAYMENT_METHODS } from "@/components/payment/PaymentMethodSelector";
@@ -16,7 +22,9 @@ export default function PaymentPage() {
   const router = useRouter();
   const { selectedItems, checkoutSelected, hydrated } = useCart();
   const { createTransaction } = useTransactions();
+  const { user, connectWallet, updateProfile } = useAuth();
 
+  const [authOpen, setAuthOpen] = useState(false);
   const [method, setMethod] = useState(PAYMENT_METHODS[0].id);
   const [modalOpen, setModalOpen] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -26,17 +34,40 @@ export default function PaymentPage() {
     [selectedItems]
   );
   const allDigital = selectedItems.length > 0 && selectedItems.every((it) => it.category === "topup");
-  const shippingFee = allDigital || subtotal === 0 ? 0 : 15000;
-  const gasFee = useMemo(() => estimateGasFeeIDR(subtotal || 0), [subtotal]);
+  const shippingFee = allDigital || subtotal === 0 ? 0 : 1;
+  const gasFee = useMemo(() => estimateGasFee(subtotal || 0), [subtotal]);
   const total = subtotal + shippingFee + gasFee;
 
   const methodLabel = PAYMENT_METHODS.find((m) => m.id === method)?.label ?? "";
 
+  const walletConnected = !!user && (user.walletConnected || user.authMethod === "wallet");
+  const balance = user?.stablecoinBalance ?? DEMO_STABLECOIN_BALANCE;
+  const insufficient = walletConnected && balance < total;
+
+  // Validation order: login -> connect wallet -> enough balance.
+  function handlePayClick() {
+    if (!user) {
+      setAuthOpen(true);
+      return;
+    }
+    if (!walletConnected) {
+      connectWallet();
+      return;
+    }
+    if (insufficient) return;
+    setModalOpen(true);
+  }
+
   function handleConfirm() {
+    if (!walletConnected || balance < total) {
+      setModalOpen(false);
+      return;
+    }
     setProcessing(true);
     // Simulated confirmation delay — this is where a real escrow contract
     // call (deposit + lock funds) would be awaited instead.
     window.setTimeout(() => {
+      updateProfile({ stablecoinBalance: balance - total });
       const purchased = checkoutSelected();
       const tx = createTransaction({
         items: purchased,
@@ -95,7 +126,7 @@ export default function PaymentPage() {
                   <p className="mt-0.5 text-xs text-ink-faint">Qty {item.qty}</p>
                 </div>
                 <p className="whitespace-nowrap text-sm font-semibold text-ink">
-                  {formatIDR(item.qty * item.price)}
+                  {formatUSDT(item.qty * item.price)}
                 </p>
               </div>
             ))}
@@ -115,18 +146,18 @@ export default function PaymentPage() {
           <dl className="mt-3 flex flex-col gap-2.5 text-sm">
             <div className="flex items-center justify-between">
               <dt className="text-ink-soft">Subtotal</dt>
-              <dd className="text-ink">{formatIDR(subtotal)}</dd>
+              <dd className="text-ink">{formatUSDT(subtotal)}</dd>
             </div>
             <div className="flex items-center justify-between">
               <dt className="text-ink-soft">Shipping fee</dt>
-              <dd className="text-ink">{shippingFee === 0 ? "Free" : formatIDR(shippingFee)}</dd>
+              <dd className="text-ink">{shippingFee === 0 ? "Free" : formatUSDT(shippingFee)}</dd>
             </div>
             <div className="flex items-center justify-between">
               <dt className="flex items-center gap-1.5 text-signal-dark">
                 <Fuel size={14} />
                 Blockchain gas fee
               </dt>
-              <dd className="text-ink">{formatIDR(gasFee)}</dd>
+              <dd className="text-ink">{formatUSDT(gasFee)}</dd>
             </div>
             <div className="flex items-start gap-1.5 rounded-lg bg-signal-soft px-3 py-2 text-xs text-signal-dark">
               <Info size={13} className="mt-0.5 shrink-0" />
@@ -139,25 +170,66 @@ export default function PaymentPage() {
 
           <div className="flex items-center justify-between">
             <span className="font-medium text-ink">Total</span>
-            <span className="font-display text-xl font-bold text-ink">{formatIDR(total)}</span>
+            <span className="text-right">
+              <span className="block font-display text-xl font-bold text-ink">
+                {formatUSDT(total)}
+              </span>
+            </span>
           </div>
 
           <div className="mt-5">
             <p className="mb-2 text-sm font-medium text-ink">Payment method</p>
             <PaymentMethodSelector value={method} onChange={setMethod} />
+            <p className="mt-2 text-xs text-ink-faint">
+              Only stablecoin is accepted. The gas fee is paid by you and included in the total.
+            </p>
           </div>
+
+          {!user && (
+            <div className="mt-4 flex items-start gap-2 rounded-xl bg-signal-soft px-3 py-2.5 text-xs text-signal-dark">
+              <LogIn size={14} className="mt-0.5 shrink-0" />
+              Please log in and connect your wallet before paying.
+            </div>
+          )}
+          {user && !walletConnected && (
+            <div className="mt-4 flex items-start gap-2 rounded-xl bg-signal-soft px-3 py-2.5 text-xs text-signal-dark">
+              <Wallet size={14} className="mt-0.5 shrink-0" />
+              Your wallet isn't connected. Connect a wallet to pay with stablecoin.
+            </div>
+          )}
+          {walletConnected && (
+            <div className="mt-4 flex items-center justify-between rounded-xl bg-paper/70 px-3 py-2.5 text-xs text-ink-soft">
+              <span>Your balance</span>
+              <span className="font-semibold text-ink">{formatUSDT(balance)}</span>
+            </div>
+          )}
+          {insufficient && (
+            <div className="mt-2 flex items-start gap-2 rounded-xl bg-red-50 px-3 py-2.5 text-xs text-red-700">
+              <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+              Insufficient balance. You need {formatUSDT(total - balance)} more to cover the
+              total including gas fee.
+            </div>
+          )}
 
           <button
             type="button"
-            onClick={() => setModalOpen(true)}
+            onClick={handlePayClick}
+            disabled={insufficient}
             className="btn-primary mt-5 w-full"
           >
-            <ShieldCheck size={17} />
-            Pay {formatIDR(total)}
+            {!user ? <LogIn size={17} /> : !walletConnected ? <Wallet size={17} /> : <ShieldCheck size={17} />}
+            {!user
+              ? "Log in to pay"
+              : !walletConnected
+                ? "Connect wallet"
+                : insufficient
+                  ? "Insufficient balance"
+                  : `Pay ${formatUSDT(total)}`}
           </button>
         </section>
       </div>
 
+      <AuthModal open={authOpen} mode="login" onClose={() => setAuthOpen(false)} />
       <ConfirmPaymentModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}

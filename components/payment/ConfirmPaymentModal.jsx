@@ -2,7 +2,7 @@
 
 import { Loader2, ShieldCheck } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
-import { formatIDR } from "@/lib/format";
+import { formatUSDT } from "@/lib/format";
 
 export function ConfirmPaymentModal({
   open,
@@ -21,8 +21,8 @@ export function ConfirmPaymentModal({
         Confirm payment
       </h2>
       <p className="mt-1 text-sm text-ink-soft">
-        You're about to pay <span className="font-semibold text-ink">{formatIDR(total)}</span> via{" "}
-        {paymentMethodLabel}. The amount will be locked in escrow and only released to the
+        You're about to pay <span className="font-semibold text-ink">{formatUSDT(idrToUSDT(total))}</span>{" "}
+        ({formatUSDT(total)}, gas fee included) via {paymentMethodLabel}. The amount will be locked in escrow and only released to the
         seller once you confirm the order arrived.
       </p>
 

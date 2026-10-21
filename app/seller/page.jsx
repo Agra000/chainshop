@@ -21,7 +21,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useProducts } from "@/context/ProductContext";
 import { BackButton } from "@/components/ui/BackButton";
 import { EmptyState } from "@/components/common/EmptyState";
-import { shortenAddress, formatDate, formatIDR } from "@/lib/format";
+import { shortenAddress, formatDate } from "@/lib/format";
 
 /** Inline confirm modal — no extra component file needed. */
 function DeleteStoreModal({ shopName, open, onClose, onConfirm, deleting }) {
@@ -276,7 +276,7 @@ export default function SellerDashboardPage() {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-ink">{p.name}</p>
                       <p className="mt-0.5 text-xs text-ink-soft">
-                        {formatIDR(p.price)} ·{" "}
+                        {formatUSDT(p.price)} ·{" "}
                         <span className="inline-flex items-center gap-1">
                           <Boxes size={11} className="inline" />
                           {p.stock} in stock

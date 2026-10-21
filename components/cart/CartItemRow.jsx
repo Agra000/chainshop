@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Minus, Plus, Trash2 } from "lucide-react";
-import { formatIDR } from "@/lib/format";
+import { formatUSDT } from "@/lib/format";
 import { useCart } from "@/context/CartContext";
 
 export function CartItemRow({ item }) {
@@ -33,7 +33,7 @@ export function CartItemRow({ item }) {
           {item.name}
         </Link>
         <p className="mt-1 font-display text-sm font-semibold text-ink sm:text-base">
-          {formatIDR(item.price)}
+          {formatUSDT(item.price)}
         </p>
       </div>
 

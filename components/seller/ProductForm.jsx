@@ -14,7 +14,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { categories } from "@/data/categories";
-import { formatIDR } from "@/lib/format";
+import { formatUSDT } from "@/lib/format";
 
 const PRODUCT_CATEGORIES = categories.filter((c) => c.slug !== "all");
 
@@ -268,16 +268,16 @@ export function ProductForm({
         <div>
           <label className="mb-1 flex items-center gap-1.5 text-xs font-medium text-ink-soft">
             <Banknote size={12} />
-            Price (IDR)
+            Price (USDT)
           </label>
           <input
             type="number"
             min="0"
-            step="500"
-            inputMode="numeric"
+            step="0.01"
+            inputMode="decimal"
             value={form.price}
             onChange={set("price")}
-            placeholder="e.g. 4299000"
+            placeholder="e.g. 25.00"
             className={`input-field ${errors.price ? "border-danger focus:border-danger" : ""}`}
           />
           {errors.price ? (
@@ -289,7 +289,7 @@ export function ProductForm({
             form.price !== "" &&
             !Number.isNaN(Number(form.price)) && (
               <p className="mt-1 text-[11px] text-ink-faint">
-                ≈ {formatIDR(Number(form.price))}
+                Buyers will pay {formatUSDT(Number(form.price))} + gas fee
               </p>
             )
           )}

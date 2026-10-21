@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { generateWalletAddress } from "@/lib/format";
+import { generateWalletAddress, DEMO_STABLECOIN_BALANCE } from "@/lib/format";
 
 const AuthContext = createContext(null);
 const STORAGE_KEY = "chainshop_user";
@@ -55,8 +55,24 @@ export function AuthProvider({ children }) {
       address: "",
       joinedAt: new Date().toISOString(),
       authMethod: "wallet",
+      walletConnected: true,
+      stablecoinBalance: DEMO_STABLECOIN_BALANCE,
       shop: null,
     });
+  }
+
+  // Attach a (simulated) wallet to an already logged-in email user.
+  function connectWallet() {
+    setUser((prev) =>
+      prev
+        ? {
+            ...prev,
+            walletAddress: generateWalletAddress(),
+            walletConnected: true,
+            stablecoinBalance: DEMO_STABLECOIN_BALANCE,
+          }
+        : prev
+    );
   }
 
   function logout() {
@@ -114,6 +130,7 @@ export function AuthProvider({ children }) {
         isSeller,
         login,
         loginWithWallet,
+        connectWallet,
         logout,
         updateProfile,
         registerSeller,

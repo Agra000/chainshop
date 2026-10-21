@@ -6,7 +6,7 @@ import { useCart } from "@/context/CartContext";
 import { BackButton } from "@/components/ui/BackButton";
 import { CartItemRow } from "@/components/cart/CartItemRow";
 import { EmptyState } from "@/components/common/EmptyState";
-import { formatIDR } from "@/lib/format";
+import { formatUSDT } from "@/lib/format";
 
 export default function CartPage() {
   const router = useRouter();
@@ -60,7 +60,7 @@ export default function CartPage() {
                 Total ({selectedCount} item{selectedCount !== 1 ? "s" : ""})
               </p>
               <p className="font-display text-lg font-bold text-ink sm:text-xl">
-                {formatIDR(selectedSubtotal)}
+                {formatUSDT(selectedSubtotal)}
               </p>
             </div>
             <button
