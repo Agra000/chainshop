@@ -17,6 +17,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { BackButton } from "@/components/ui/BackButton";
 import { EmptyState } from "@/components/common/EmptyState";
+import { SellerDashboardSkeleton } from "@/components/ui/Skeleton";
 import { shortenAddress, formatDate, formatUSDT } from "@/lib/format";
 import { sellerservice } from "@/services/SellerService";
 import DeleteStoreModal from "@/components/seller/DeleteStoreModal";
@@ -30,6 +31,7 @@ export default function SellerDashboardPage() {
   const [dashboard, setDashboard] = useState(null);
   const [deleteModal, setDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -44,12 +46,17 @@ export default function SellerDashboardPage() {
     if (!user?.storeId) return;
 
     async function loadData() {
-      const [info, dash] = await Promise.all([
-        sellerservice.GetSellerInfo(user.storeId),
-        sellerservice.GetSellerDashboard(user.storeId),
-      ]);
-      setShop(info);
-      if (dash.status) setDashboard(dash);
+      setLoadingData(true);
+      try {
+        const [info, dash] = await Promise.all([
+          sellerservice.GetSellerInfo(user.storeId),
+          sellerservice.GetSellerDashboard(user.storeId),
+        ]);
+        setShop(info);
+        if (dash.status) setDashboard(dash);
+      } finally {
+        setLoadingData(false);
+      }
     }
 
     loadData();
@@ -107,6 +114,9 @@ export default function SellerDashboardPage() {
         Seller Dashboard
       </h1>
 
+      {!hydrated || loadingData ? (
+        <SellerDashboardSkeleton />
+      ) : (
       <div className="grid gap-5 md:grid-cols-[280px_1fr] md:items-start">
         {/* ── Shop identity card ── */}
         <div className="flex flex-col gap-3">
@@ -289,6 +299,7 @@ export default function SellerDashboardPage() {
           </section>
         </div>
       </div>
+      )}
 
       <DeleteStoreModal
         shopName={shop.shopName}

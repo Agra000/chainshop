@@ -7,6 +7,7 @@ import { CheckCircle2, Save, Trash2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useProducts } from "@/context/ProductContext";
 import { BackButton } from "@/components/ui/BackButton";
+import { FormSkeleton, Skeleton } from "@/components/ui/Skeleton";
 import { ProductForm } from "@/components/seller/ProductForm";
 import { fetchCategories, getCategoryByName } from "@/data/categories";
 import { getApiErrorMessage } from "@/lib/axios";
@@ -43,7 +44,23 @@ export default function EditProductPage() {
     if (!isSeller || !product || !ownsProduct) router.replace("/seller");
   }, [hydrated, loaded, isSeller, product, ownsProduct, router]);
 
-  if (!hydrated || !loaded || !isSeller || !product || !ownsProduct) return null;
+  if (!hydrated || !loaded) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-4 sm:px-6 lg:px-8">
+        <BackButton />
+        <div className="mb-4 mt-1 flex items-center gap-3">
+          <Skeleton className="h-10 w-10 !rounded-xl" />
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-3 w-60" />
+          </div>
+        </div>
+        <FormSkeleton fields={5} />
+      </div>
+    );
+  }
+
+  if (!isSeller || !product || !ownsProduct) return null;
 
   async function handleSubmit(values) {
     let image = { url: "", uploaded: false };

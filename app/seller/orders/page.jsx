@@ -8,6 +8,7 @@ import { mapOrderSummary } from "@/context/TransactionContext";
 import { orderService } from "@/services/OrderService";
 import { BackButton } from "@/components/ui/BackButton";
 import { OrderCard } from "@/components/transaction/OrderCard";
+import { ListSkeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/common/EmptyState";
 
 const FILTERS = [
@@ -81,7 +82,7 @@ function SellerOrders() {
       </div>
 
       {loading ? (
-        <p className="p-8 text-center text-ink-faint">Loading orders...</p>
+        <ListSkeleton count={4} />
       ) : orders.length === 0 ? (
         <EmptyState
           icon={<PackageSearch size={26} />}
