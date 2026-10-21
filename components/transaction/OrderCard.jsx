@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatUSDT } from "@/lib/format";
 import { ORDER_STAGES } from "@/context/TransactionContext";
 
 const STATUS_STYLE = {

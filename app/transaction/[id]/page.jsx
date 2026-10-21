@@ -11,7 +11,7 @@ import {
   LockOpen,
 } from "lucide-react";
 import { useTransactions, ORDER_STAGES } from "@/context/TransactionContext";
-import { formatDate, shortenAddress } from "@/lib/format";
+import { formatDate, formatUSDT, shortenAddress } from "@/lib/format";
 import { BackButton } from "@/components/ui/BackButton";
 import { EmptyState } from "@/components/common/EmptyState";
 import { TrackingTimeline } from "@/components/transaction/TrackingTimeline";

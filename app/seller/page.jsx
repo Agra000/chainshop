@@ -19,9 +19,10 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useProducts } from "@/context/ProductContext";
+import { SellerRegistrationModal } from "@/components/seller/SellerRegistrationModal";
 import { BackButton } from "@/components/ui/BackButton";
 import { EmptyState } from "@/components/common/EmptyState";
-import { shortenAddress, formatDate } from "@/lib/format";
+import { shortenAddress, formatDate, formatUSDT } from "@/lib/format";
 
 /** Inline confirm modal — no extra component file needed. */
 function DeleteStoreModal({ shopName, open, onClose, onConfirm, deleting }) {
@@ -108,6 +109,7 @@ export default function SellerDashboardPage() {
   const { getSellerProducts } = useProducts();
   const router = useRouter();
 
+  const [editModal, setEditModal] = useState(false);
   const [deleteModal, setDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -193,13 +195,14 @@ export default function SellerDashboardPage() {
                 </span>
               </div>
 
-              <Link
-                href="/seller/settings"
+              <button
+                type="button"
+                onClick={() => setEditModal(true)}
                 className="btn-secondary w-full !py-2 !text-xs"
               >
                 <Edit3 size={13} />
                 Edit shop info
-              </Link>
+              </button>
             </div>
           </section>
 
@@ -315,6 +318,11 @@ export default function SellerDashboardPage() {
         </div>
       </div>
 
+      <SellerRegistrationModal
+        mode="edit"
+        open={editModal}
+        onClose={() => setEditModal(false)}
+      />
       <DeleteStoreModal
         shopName={shop.shopName}
         open={deleteModal}

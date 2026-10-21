@@ -41,7 +41,7 @@ export default function PaymentPage() {
   const methodLabel = PAYMENT_METHODS.find((m) => m.id === method)?.label ?? "";
 
   const walletConnected = !!user && (user.walletConnected || user.authMethod === "wallet");
-  const balance = user?.stablecoinBalance ?? DEMO_STABLECOIN_BALANCE;
+  const balance = DEMO_STABLECOIN_BALANCE;
   const insufficient = walletConnected && balance < total;
 
   // Validation order: login -> connect wallet -> enough balance.

@@ -198,8 +198,24 @@ const EMPTY_FORM = (walletAddress = "") => ({
   payoutWallet: walletAddress,
 });
 
-export function SellerRegistrationModal({ open, onClose }) {
-  const { user, registerSeller } = useAuth();
+function formFromShop(shop, userWallet) {
+  return {
+    shopName: shop.shopName ?? "",
+    shopImage: shop.shopImage ?? null,
+    shopDescription: shop.shopDescription ?? "",
+    city: shop.city ?? "",
+    payoutMode: shop.payoutWallet === userWallet ? "own" : "other",
+    payoutWallet: shop.payoutWallet ?? "",
+  };
+}
+
+/**
+ * mode="register" opens a new shop; mode="edit" pre-fills the form with the
+ * current shop data and saves changes via updateShop.
+ */
+export function SellerRegistrationModal({ open, onClose, mode = "register" }) {
+  const { user, registerSeller, updateShop } = useAuth();
+  const isEdit = mode === "edit";
 
   const [form, setForm] = useState(EMPTY_FORM(user?.walletAddress));
   const [submitting, setSubmitting] = useState(false);
@@ -208,6 +224,15 @@ export function SellerRegistrationModal({ open, onClose }) {
 
   const walletInvalid = !isValidWalletAddress(form.payoutWallet);
   const showWalletError = form.payoutMode === "other" && walletTouched && walletInvalid;
+
+  // Edit mode: load the saved shop data every time the modal opens.
+  useEffect(() => {
+    if (isEdit && open && user?.shop) {
+      setForm(formFromShop(user.shop, user.walletAddress));
+      setWalletTouched(false);
+      setDone(false);
+    }
+  }, [isEdit, open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep payoutWallet in sync when mode switches to "own"
   useEffect(() => {
@@ -238,13 +263,15 @@ export function SellerRegistrationModal({ open, onClose }) {
     }
     setSubmitting(true);
     window.setTimeout(() => {
-      registerSeller({
+      const shopData = {
         shopName: form.shopName.trim(),
         shopImage: form.shopImage,
         shopDescription: form.shopDescription.trim(),
         city: form.city,
         payoutWallet: form.payoutWallet,
-      });
+      };
+      if (isEdit) updateShop(shopData);
+      else registerSeller(shopData);
       setSubmitting(false);
       setDone(true);
     }, 900);
@@ -254,7 +281,7 @@ export function SellerRegistrationModal({ open, onClose }) {
     if (submitting) return;
     if (done) {
       setDone(false);
-      setForm(EMPTY_FORM(user?.walletAddress));
+      if (!isEdit) setForm(EMPTY_FORM(user?.walletAddress));
     }
     onClose();
   }
@@ -268,16 +295,25 @@ export function SellerRegistrationModal({ open, onClose }) {
             <CheckCircle2 size={26} />
           </div>
           <h2 className="font-display text-xl font-semibold text-ink">
-            Welcome to the seller program!
+            {isEdit ? "Shop updated!" : "Welcome to the seller program!"}
           </h2>
           <p className="max-w-xs text-sm text-ink-soft">
-            Your shop{" "}
-            <span className="font-semibold text-ink">{form.shopName}</span> is
-            now live. Start listing products whenever you're ready.
+            {isEdit ? (
+              <>
+                Changes to{" "}
+                <span className="font-semibold text-ink">{form.shopName}</span> have been saved.
+              </>
+            ) : (
+              <>
+                Your shop{" "}
+                <span className="font-semibold text-ink">{form.shopName}</span> is
+                now live. Start listing products whenever you're ready.
+              </>
+            )}
           </p>
           <button type="button" onClick={handleClose} className="btn-primary mt-2">
             <Store size={16} />
-            Go to my shop dashboard
+            {isEdit ? "Done" : "Go to my shop dashboard"}
           </button>
         </div>
       ) : (
@@ -289,9 +325,9 @@ export function SellerRegistrationModal({ open, onClose }) {
             </div>
             <div>
               <h2 id="seller-reg-title" className="font-display text-xl font-semibold text-ink">
-                Open your shop
+                {isEdit ? "Edit your shop" : "Open your shop"}
               </h2>
-              <p className="text-xs text-ink-faint">Takes less than a minute to set up.</p>
+              <p className="text-xs text-ink-faint">{isEdit ? "Update your shop details." : "Takes less than a minute to set up."}</p>
             </div>
           </div>
 
@@ -400,12 +436,12 @@ export function SellerRegistrationModal({ open, onClose }) {
                 {submitting ? (
                   <>
                     <Loader2 size={16} className="animate-spin" />
-                    Registering…
+                    {isEdit ? "Saving…" : "Registering…"}
                   </>
                 ) : (
                   <>
                     <Store size={16} />
-                    Open my shop
+                    {isEdit ? "Save changes" : "Open my shop"}
                   </>
                 )}
               </button>

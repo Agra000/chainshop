@@ -1,9 +1,35 @@
 "use client";
 
+import { getProductById } from "@/data/products";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 const CartContext = createContext(null);
 const STORAGE_KEY = "chainshop_cart";
+const SELLER_PRODUCTS_KEY = "chainshop_seller_products";
+
+// Cart lines are snapshots saved in localStorage, so their price can go stale
+// (e.g. old Rupiah prices from before the switch to USDT). Re-read the current
+// price/name/image from the catalog whenever the cart is loaded.
+function refreshFromCatalog(items) {
+  let sellerProducts = [];
+  try {
+    sellerProducts = JSON.parse(window.localStorage.getItem(SELLER_PRODUCTS_KEY) || "[]");
+  } catch (e) {
+    // ignore corrupted storage
+  }
+  return items.map((it) => {
+    const current =
+      getProductById(it.id) || sellerProducts.find((p) => p.id === it.id);
+    if (!current) return it;
+    return {
+      ...it,
+      name: current.name,
+      image: current.images?.[0] ?? it.image,
+      price: current.price,
+      category: current.category,
+    };
+  });
+}
 
 export function CartProvider({ children }) {
   const [items, setItems] = useState([]);
@@ -13,7 +39,7 @@ export function CartProvider({ children }) {
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) setItems(JSON.parse(raw));
+      if (raw) setItems(refreshFromCatalog(JSON.parse(raw)));
     } catch (e) {
       // ignore corrupted storage
     }
