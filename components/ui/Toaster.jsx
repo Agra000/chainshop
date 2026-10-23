@@ -10,19 +10,19 @@ const EXIT_MS = 200;
 const VARIANTS = {
   success: {
     icon: CheckCircle2,
-    title: "Berhasil",
+    title: "Success",
     iconWrap: "bg-ledger-soft text-ledger",
     bar: "bg-ledger",
   },
   error: {
     icon: XCircle,
-    title: "Terjadi kesalahan",
+    title: "Something Happend !",
     iconWrap: "bg-danger-soft text-danger",
     bar: "bg-danger",
   },
   warning: {
     icon: AlertTriangle,
-    title: "Perhatian",
+    title: "Alert !",
     iconWrap: "bg-amber-100 text-amber-600",
     bar: "bg-amber-500",
   },
@@ -118,7 +118,9 @@ export function Toaster() {
       const next = e.detail;
       setToasts((prev) => {
         // pesan identik yang masih tampil tidak perlu ditumpuk
-        if (prev.some((t) => t.message === next.message && t.type === next.type)) {
+        if (
+          prev.some((t) => t.message === next.message && t.type === next.type)
+        ) {
           return prev;
         }
         return [...prev, next].slice(-MAX_TOASTS);
