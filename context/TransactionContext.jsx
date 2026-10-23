@@ -187,8 +187,8 @@ export function TransactionProvider({ children }) {
    * Jika pembayaran gagal, order yang belum dibayar dibatalkan dan item
    * dikembalikan ke cart.
    */
-  async function createTransaction({ items, addressId, shippingFee, gasFee, paymentMethod, paymentMethodLabel }) {
-    const checkout = await orderService.Checkout(userId, { addressId, paymentMethod });
+  async function createTransaction({ items, addressId, shippingFee, gasFee, paymentMethod, paymentMethodLabel, totalPrice }) {
+    const checkout = await orderService.Checkout(userId, { addressId, paymentMethod, totalPrice });
     if (!checkout.status) throw new Error(checkout.message);
 
     const orders = checkout.data || [];

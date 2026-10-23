@@ -98,6 +98,7 @@ export default function PaymentPage() {
         gasFee,
         paymentMethod: method,
         paymentMethodLabel: methodLabel,
+        totalPrice: total,
       });
       await checkoutSelected();
       setModalOpen(false);
