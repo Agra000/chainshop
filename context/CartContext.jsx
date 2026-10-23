@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useAuth } from "@/context/AuthContext";
 import { cartService } from "@/services/CartService";
 import { getApiErrorMessage } from "@/lib/axios";
@@ -163,16 +170,16 @@ export function CartProvider({ children }) {
 
   async function setQty(id, qty) {
     const line = items.find((it) => it.id === id);
-    const nextQty = Math.max(1, qty);
-    setItems((prev) =>
-      prev.map((it) => (it.id === id ? { ...it, qty: nextQty } : it)),
-    );
+    // const nextQty = Math.max(1, qty);
+    // setItems((prev) =>
+    //   prev.map((it) => (it.id === id ? { ...it, qty: nextQty } : it)),
+    // );
     if (!userId || !line) return;
 
     try {
       const res = await cartService.UpdateCart(userId, {
         cartId: line.cartId,
-        quantity: nextQty,
+        quantity: qty,
       });
       if (!res.status) alert(res.message);
     } catch (error) {
@@ -196,7 +203,9 @@ export function CartProvider({ children }) {
         lines
           .map((l) => ({ ...l, line: items.find((it) => it.id === l.id) }))
           .filter((l) => l.line)
-          .map((l) => cartService.SelectCart(userId, l.line.cartId, l.selected)),
+          .map((l) =>
+            cartService.SelectCart(userId, l.line.cartId, l.selected),
+          ),
       );
     } catch (error) {
       alert(getApiErrorMessage(error));
