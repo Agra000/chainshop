@@ -23,6 +23,8 @@ import { formatDate, formatUSDT, shortenAddress } from "@/lib/format";
 import { BackButton } from "@/components/ui/BackButton";
 import { EmptyState } from "@/components/common/EmptyState";
 import { TrackingTimeline } from "@/components/transaction/TrackingTimeline";
+import { toast } from "@/lib/toast";
+import { OrderDetailSkeleton } from "@/components/ui/Skeleton";
 
 export default function SellerOrderDetailPage({ params }) {
   const { user, hydrated } = useAuth();
@@ -67,12 +69,12 @@ export default function SellerOrderDetailPage({ params }) {
     try {
       const res = await action();
       if (res && res.status === false) {
-        alert(res.message);
+        toast.error(res.message);
         return;
       }
       await loadOrder();
     } catch (error) {
-      alert(getApiErrorMessage(error));
+      toast.error(getApiErrorMessage(error));
     } finally {
       setBusy("");
     }
@@ -132,13 +134,13 @@ export default function SellerOrderDetailPage({ params }) {
       const res = await orderService.VerifyInvoice(tx.id, tx.invoiceHash);
       setVerify(res);
     } catch (error) {
-      alert(getApiErrorMessage(error));
+      toast.error(getApiErrorMessage(error));
     } finally {
       setBusy("");
     }
   }
 
-  if (!hydrated || !loaded) return null;
+  if (!hydrated || !loaded) return <OrderDetailSkeleton />;
 
   if (!tx) {
     return (

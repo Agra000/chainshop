@@ -14,6 +14,7 @@ import { isValidWalletAddress, shortenAddress } from "@/lib/format";
 import { sellerservice } from "@/services/SellerService";
 import { getApiErrorMessage } from "@/lib/axios";
 import { deleteImage, uploadImageIfNeeded } from "@/lib/upload";
+import { toast } from "@/lib/toast";
 
 export default function ShopSettingsPage() {
   const { user, isSeller, hydrated, updateShop } = useAuth();
@@ -81,7 +82,7 @@ export default function ShopSettingsPage() {
       setDone(true);
     } catch (error) {
       if (image.uploaded) await deleteImage(user.userId, image.url);
-      alert(getApiErrorMessage(error, "Failed to save shop info."));
+      toast.error(getApiErrorMessage(error, "Failed to save shop info."));
     } finally {
       setSaving(false);
     }

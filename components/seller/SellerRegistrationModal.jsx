@@ -16,6 +16,7 @@ import { sellerservice } from "@/services/SellerService";
 import { deleteImage, uploadImageIfNeeded } from "@/lib/upload";
 import { ShopImageUpload } from "./ShopImageUpload";
 import { PayoutToggle } from "./PayoutToggle";
+import { toast } from "@/lib/toast";
 
 export const CITIES = [
   "Jakarta Pusat",
@@ -112,7 +113,7 @@ export function SellerRegistrationModal({ open, onClose }) {
       const res = await sellerservice.becomeSeller(user.userId, dataPayload);
       if (!res.status) {
         if (shopImage.uploaded) await deleteImage(user.userId, shopImage.url);
-        alert(res.message);
+        toast.error(res.message);
         return;
       }
       await getUserInfo();
@@ -121,7 +122,7 @@ export function SellerRegistrationModal({ open, onClose }) {
     } catch (error) {
       console.error("Error registering seller:", error);
       if (shopImage.uploaded) await deleteImage(user.userId, shopImage.url);
-      alert(error.message || "Failed to open shop.");
+      toast.error(error.message || "Failed to open shop.");
     } finally {
       // Matikan status loading terlepas dari berhasil atau gagal
       setSubmitting(false);

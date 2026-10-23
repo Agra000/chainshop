@@ -23,6 +23,7 @@ import { sellerservice } from "@/services/SellerService";
 import DeleteStoreModal from "@/components/seller/DeleteStoreModal";
 import { mapProduct } from "@/data/products";
 import { getApiErrorMessage } from "@/lib/axios";
+import { toast } from "@/lib/toast";
 
 export default function SellerDashboardPage() {
   const { user, deleteShop, hydrated } = useAuth();
@@ -101,7 +102,7 @@ export default function SellerDashboardPage() {
         router.replace("/");
       }
     } catch (error) {
-      alert(getApiErrorMessage(error, "Failed to delete store."));
+      toast.error(getApiErrorMessage(error, "Failed to delete store."));
     } finally {
       setDeleting(false);
     }

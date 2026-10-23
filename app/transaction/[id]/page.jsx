@@ -17,6 +17,8 @@ import { formatDate, formatUSDT, shortenAddress } from "@/lib/format";
 import { BackButton } from "@/components/ui/BackButton";
 import { EmptyState } from "@/components/common/EmptyState";
 import { TrackingTimeline } from "@/components/transaction/TrackingTimeline";
+import { toast } from "@/lib/toast";
+import { OrderDetailSkeleton } from "@/components/ui/Skeleton";
 
 const ARRIVED_INDEX = ORDER_STAGES.indexOf("Arrived at Destination");
 const COMPLETED_INDEX = ORDER_STAGES.indexOf("Completed");
@@ -41,7 +43,7 @@ export default function TransactionDetailPage({ params }) {
     loadOrder();
   }, [hydrated, loadOrder]);
 
-  if (!hydrated || !loaded) return null;
+  if (!hydrated || !loaded) return <OrderDetailSkeleton />;
 
   if (!tx) {
     return (
@@ -67,7 +69,7 @@ export default function TransactionDetailPage({ params }) {
       const updated = await confirmReceived(tx.id);
       if (updated) setTx(updated);
     } catch (error) {
-      alert(getApiErrorMessage(error, "Failed to confirm delivery."));
+      toast.error(getApiErrorMessage(error, "Failed to confirm delivery."));
     } finally {
       setConfirming(false);
     }
@@ -88,7 +90,7 @@ export default function TransactionDetailPage({ params }) {
       await cancelTransaction(tx.id);
       await loadOrder();
     } catch (error) {
-      alert(getApiErrorMessage(error, "Failed to cancel order."));
+      toast.error(getApiErrorMessage(error, "Failed to cancel order."));
     }
   }
 
@@ -99,7 +101,7 @@ export default function TransactionDetailPage({ params }) {
       await rateItem(item.orderItemId, rating);
       await loadOrder();
     } catch (error) {
-      alert(getApiErrorMessage(error, "Failed to rate item."));
+      toast.error(getApiErrorMessage(error, "Failed to rate item."));
     }
   }
 

@@ -11,6 +11,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { cartService } from "@/services/CartService";
 import { getApiErrorMessage } from "@/lib/axios";
+import { toast } from "@/lib/toast";
 
 const CartContext = createContext(null);
 const STORAGE_KEY = "chainshop_cart";
@@ -100,6 +101,12 @@ export function CartProvider({ children }) {
   }, [items, hydrated, userId]);
 
   async function addItem(product, qty = 1) {
+    // jangan proses produk yang stoknya habis
+    if (typeof product.stock === "number" && product.stock <= 0) {
+      toast.warning("Stok produk ini sudah habis.");
+      return false;
+    }
+
     if (!userId) {
       setItems((prev) => {
         const existing = prev.find((it) => it.id === product.id);
@@ -129,7 +136,7 @@ export function CartProvider({ children }) {
       const existingQty = items.find((it) => it.id === product.id)?.qty ?? 0;
       const res = await cartService.AddToCart(userId, product.id);
       if (!res.status) {
-        alert(res.message);
+        toast.error(res.message);
         return false;
       }
 
@@ -142,7 +149,7 @@ export function CartProvider({ children }) {
             quantity: existingQty + qty,
             isSelected: true,
           });
-          if (!upd.status) alert(upd.message);
+          if (!upd.status) toast.error(upd.message);
         }
       }
 
@@ -150,7 +157,7 @@ export function CartProvider({ children }) {
       setBump((b) => b + 1);
       return true;
     } catch (error) {
-      alert(getApiErrorMessage(error, "Gagal menambahkan ke cart."));
+      toast.error(getApiErrorMessage(error, "Gagal menambahkan ke cart."));
       return false;
     }
   }
@@ -163,7 +170,7 @@ export function CartProvider({ children }) {
     try {
       await cartService.RemoveCart(userId, line.cartId);
     } catch (error) {
-      alert(getApiErrorMessage(error));
+      toast.error(getApiErrorMessage(error));
     }
     await loadCart();
   }
@@ -181,9 +188,9 @@ export function CartProvider({ children }) {
         cartId: line.cartId,
         quantity: qty,
       });
-      if (!res.status) alert(res.message);
+      if (!res.status) toast.error(res.message);
     } catch (error) {
-      alert(getApiErrorMessage(error));
+      toast.error(getApiErrorMessage(error));
     }
     await loadCart();
   }
@@ -208,7 +215,7 @@ export function CartProvider({ children }) {
           ),
       );
     } catch (error) {
-      alert(getApiErrorMessage(error));
+      toast.error(getApiErrorMessage(error));
       await loadCart();
     }
   }

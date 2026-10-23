@@ -7,6 +7,7 @@ import { formatUSDT } from "@/lib/format";
 import { BackButton } from "@/components/ui/BackButton";
 import { OrderCard } from "@/components/transaction/OrderCard";
 import { EmptyState } from "@/components/common/EmptyState";
+import { OrderListPageSkeleton } from "@/components/ui/Skeleton";
 
 export default function HistoryPage() {
   const { completed, cancelled, hydrated } = useTransactions();
@@ -30,7 +31,7 @@ export default function HistoryPage() {
     [completed]
   );
 
-  if (!hydrated) return null;
+  if (!hydrated) return <OrderListPageSkeleton withStats />;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-4 sm:px-6 lg:px-8">

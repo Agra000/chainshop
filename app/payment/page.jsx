@@ -14,6 +14,8 @@ import { BackButton } from "@/components/ui/BackButton";
 import { EmptyState } from "@/components/common/EmptyState";
 import { PaymentMethodSelector, PAYMENT_METHODS } from "@/components/payment/PaymentMethodSelector";
 import { ConfirmPaymentModal } from "@/components/payment/ConfirmPaymentModal";
+import { toast } from "@/lib/toast";
+import { PaymentSkeleton } from "@/components/ui/Skeleton";
 
 export default function PaymentPage() {
   const router = useRouter();
@@ -56,13 +58,13 @@ export default function PaymentPage() {
     try {
       const res = await addressService.UpsertAddress(user.userId, { ...addressForm, isDefault: true });
       if (!res.status) {
-        alert(res.message);
+        toast.error(res.message);
         return;
       }
       setAddressId("");
       await loadAddresses();
     } catch (error) {
-      alert(getApiErrorMessage(error, "Failed to save address."));
+      toast.error(getApiErrorMessage(error, "Failed to save address."));
     } finally {
       setSavingAddress(false);
     }
@@ -81,7 +83,7 @@ export default function PaymentPage() {
 
   async function handleConfirm() {
     if (!addressId) {
-      alert("Please add a shipping address first.");
+      toast.warning("Tambahkan alamat pengiriman terlebih dahulu.");
       setModalOpen(false);
       return;
     }
@@ -102,14 +104,14 @@ export default function PaymentPage() {
       router.push(tx.orders.length > 1 ? "/transaction" : `/transaction/${tx.id}`);
     } catch (error) {
       await checkoutSelected();
-      alert(getApiErrorMessage(error, "Payment failed."));
+      toast.error(getApiErrorMessage(error, "Payment failed."));
       setModalOpen(false);
     } finally {
       setProcessing(false);
     }
   }
 
-  if (!hydrated) return null;
+  if (!hydrated) return <PaymentSkeleton />;
 
   if (!isLoggedIn) {
     return (

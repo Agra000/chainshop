@@ -12,6 +12,7 @@ import { ProductForm } from "@/components/seller/ProductForm";
 import { fetchCategories, getCategoryByName } from "@/data/categories";
 import { getApiErrorMessage } from "@/lib/axios";
 import { deleteImage, uploadImageIfNeeded } from "@/lib/upload";
+import { toast } from "@/lib/toast";
 
 export default function EditProductPage() {
   const { id } = useParams();
@@ -74,7 +75,7 @@ export default function EditProductPage() {
       setDone(true);
     } catch (error) {
       if (image.uploaded) await deleteImage(user.userId, image.url);
-      alert(getApiErrorMessage(error, "Failed to save product."));
+      toast.error(getApiErrorMessage(error, "Failed to save product."));
     }
   }
 
@@ -85,7 +86,7 @@ export default function EditProductPage() {
       await deleteProduct(user.storeId, product.id);
       router.replace("/seller");
     } catch (error) {
-      alert(getApiErrorMessage(error, "Failed to delete product."));
+      toast.error(getApiErrorMessage(error, "Failed to delete product."));
       setDeleting(false);
     }
   }

@@ -12,6 +12,7 @@ import { EscrowBadge } from "@/components/common/EscrowBadge";
 import { ProductGallery } from "@/components/product/ProductGallery";
 import { ProductActions } from "@/components/product/ProductActions";
 import { ProductGrid } from "@/components/product/ProductGrid";
+import { ProductDetailSkeleton } from "@/components/ui/Skeleton";
 
 export default function ProductDetailPage({ params }) {
   const [product, setProduct] = useState(null);
@@ -38,8 +39,7 @@ export default function ProductDetailPage({ params }) {
     loadData();
   }, [params.id]);
 
-  if (loading)
-    return <p className="p-8 text-center text-ink-faint">Loading produk...</p>;
+  if (loading) return <ProductDetailSkeleton />;
 
   if (!product) notFound();
 

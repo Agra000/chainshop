@@ -207,12 +207,16 @@ export function CategoryBar() {
 
 export function CategoryBarFallback() {
   return (
-    <div className="flex items-center gap-2 py-1">
+    <div role="status" aria-label="Loading categories" className="flex items-center gap-2 overflow-hidden py-1">
       {Array.from({ length: 7 }).map((_, i) => (
         <div
           key={i}
-          className="h-[74px] w-20 shrink-0 animate-pulse rounded-2xl bg-paper"
-        />
+          aria-hidden="true"
+          className="skeleton flex h-[74px] w-20 shrink-0 flex-col items-center justify-center gap-2 rounded-2xl !bg-paper"
+        >
+          <span className="h-7 w-7 rounded-full bg-border" />
+          <span className="h-2.5 w-12 rounded bg-border" />
+        </div>
       ))}
     </div>
   );
