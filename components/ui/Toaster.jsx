@@ -16,7 +16,7 @@ const VARIANTS = {
   },
   error: {
     icon: XCircle,
-    title: "Something Happend !",
+    title: "Something Happended !",
     iconWrap: "bg-danger-soft text-danger",
     bar: "bg-danger",
   },
