@@ -23,8 +23,6 @@ export function ProductActions({ product }) {
   }
 
   async function handleBuyNow() {
-    const ok = await addItem(product, qty);
-    if (!ok) return;
     await selectOnly(product.id);
     router.push("/payment");
   }
@@ -42,7 +40,9 @@ export function ProductActions({ product }) {
           >
             <Minus size={15} />
           </button>
-          <span className="w-10 text-center text-sm font-medium text-ink">{qty}</span>
+          <span className="w-10 text-center text-sm font-medium text-ink">
+            {qty}
+          </span>
           <button
             type="button"
             onClick={() => setQty((q) => clamp(q + 1))}
@@ -52,15 +52,25 @@ export function ProductActions({ product }) {
             <Plus size={15} />
           </button>
         </div>
-        <span className="text-xs text-ink-faint">{product.stock} available</span>
+        <span className="text-xs text-ink-faint">
+          {product.stock} available
+        </span>
       </div>
 
       <div className="flex flex-col gap-2.5 sm:flex-row">
-        <button type="button" onClick={handleAddToCart} className="btn-secondary flex-1">
+        <button
+          type="button"
+          onClick={handleAddToCart}
+          className="btn-secondary flex-1"
+        >
           {added ? <Check size={17} /> : <ShoppingCart size={17} />}
           {added ? "Added to cart" : "Add to cart"}
         </button>
-        <button type="button" onClick={handleBuyNow} className="btn-primary flex-1">
+        <button
+          type="button"
+          onClick={handleBuyNow}
+          className="btn-primary flex-1"
+        >
           <Zap size={17} />
           Buy now
         </button>
