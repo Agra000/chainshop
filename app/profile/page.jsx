@@ -10,7 +10,12 @@ import { formatDate, shortenAddress } from "@/lib/format";
 
 export default function ProfilePage() {
   const { user, hydrated, updateProfile } = useAuth();
-  const [form, setForm] = useState({ name: "", email: "", phone: "", address: "" });
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+  });
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -71,16 +76,22 @@ export default function ProfilePage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-4 sm:px-6 lg:px-8">
       <BackButton />
-      <h1 className="mb-4 mt-1 font-display text-xl font-semibold text-ink">Profile</h1>
+      <h1 className="mb-4 mt-1 font-display text-xl font-semibold text-ink">
+        Profile
+      </h1>
 
       <div className="grid gap-5 md:grid-cols-[260px_1fr] md:items-start">
         {/* left: identity card */}
         <section className="card flex flex-col items-center gap-3 p-6 text-center">
           <Avatar name={user.name} seed={user.walletAddress} size={72} />
           <div>
-            <p className="font-display text-base font-semibold text-ink">{user.name}</p>
+            <p className="font-display text-base font-semibold text-ink">
+              {user.name}
+            </p>
             <p className="text-xs text-ink-faint">
-              {user.authMethod === "wallet" ? "Wallet account" : "Email account"}
+              {user.authMethod === "wallet"
+                ? "Wallet account"
+                : "Email account"}
             </p>
           </div>
 
@@ -104,7 +115,11 @@ export default function ProfilePage() {
                 aria-label="Copy wallet address"
                 className="icon-btn !h-7 !w-7 shrink-0"
               >
-                {copied ? <Check size={14} className="text-ledger" /> : <Copy size={14} />}
+                {copied ? (
+                  <Check size={14} className="text-ledger" />
+                ) : (
+                  <Copy size={14} />
+                )}
               </button>
             </div>
           </div>
@@ -116,12 +131,18 @@ export default function ProfilePage() {
             Personal information
           </h2>
           <p className="mt-1 text-sm text-ink-soft">
-            Used for order confirmations and delivery — nothing here is shared publicly.
+            Used for order confirmations and delivery — nothing here is shared
+            publicly.
           </p>
 
-          <form onSubmit={handleSave} className="mt-4 grid gap-4 sm:grid-cols-2">
+          <form
+            onSubmit={handleSave}
+            className="mt-4 grid gap-4 sm:grid-cols-2"
+          >
             <div className="sm:col-span-1">
-              <label className="mb-1 block text-xs font-medium text-ink-soft">Full name</label>
+              <label className="mb-1 block text-xs font-medium text-ink-soft">
+                Full name
+              </label>
               <input
                 value={form.name}
                 onChange={handleChange("name")}
@@ -142,7 +163,9 @@ export default function ProfilePage() {
               />
             </div>
             <div className="sm:col-span-1">
-              <label className="mb-1 block text-xs font-medium text-ink-soft">Phone number</label>
+              <label className="mb-1 block text-xs font-medium text-ink-soft">
+                Phone number
+              </label>
               <input
                 value={form.phone}
                 onChange={handleChange("phone")}
@@ -151,7 +174,9 @@ export default function ProfilePage() {
               />
             </div>
             <div className="sm:col-span-1">
-              <label className="mb-1 block text-xs font-medium text-ink-soft">City</label>
+              <label className="mb-1 block text-xs font-medium text-ink-soft">
+                City
+              </label>
               <input
                 value={form.address}
                 onChange={handleChange("address")}

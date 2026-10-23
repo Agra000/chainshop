@@ -43,7 +43,7 @@ export function AuthProvider({ children }) {
           phone: res.phone,
           city: res.city,
           authMethod: res.authMethod,
-          joinedAt: prev?.joinedAt || res.lastLoginAt || new Date().toISOString(),
+          joinedAt: res.joinedAt || prev?.joinedAt || new Date().toISOString(),
           storeId: res.storeId,
           storeName: res.storeName,
           walletAddress: res.walletAddress,
