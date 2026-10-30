@@ -1,12 +1,10 @@
 "use client";
 
-import { Landmark, WalletMinimal, CreditCard, Coins } from "lucide-react";
+import { Coins } from "lucide-react";
 
+// Pembayaran hanya lewat escrow onchain: MetaMask + Mock USDT di Sepolia testnet (tanpa uang asli)
 export const PAYMENT_METHODS = [
-  { id: "bank_transfer", label: "Bank Transfer / Virtual Account", icon: Landmark },
-  { id: "ewallet", label: "E-Wallet Balance", icon: WalletMinimal },
-  { id: "card", label: "Credit / Debit Card", icon: CreditCard },
-  { id: "crypto", label: "Crypto Wallet (USDT / ETH)", icon: Coins },
+  { id: "crypto", label: "MetaMask · Mock USDT (Sepolia testnet)", icon: Coins },
 ];
 
 export function PaymentMethodSelector({ value, onChange }) {

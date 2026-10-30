@@ -10,11 +10,17 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { OrderListPageSkeleton } from "@/components/ui/Skeleton";
 
 export default function HistoryPage() {
-  const { completed, cancelled, hydrated } = useTransactions();
+  const { completed, refunded, cancelled, hydrated } = useTransactions();
   const [query, setQuery] = useState("");
 
-  // order selesai + order yang dibatalkan
-  const history = useMemo(() => [...completed, ...cancelled], [completed, cancelled]);
+  // order selesai + order yang di-refund + order yang dibatalkan
+  const history = useMemo(
+    () =>
+      [...completed, ...refunded, ...cancelled].sort(
+        (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0),
+      ),
+    [completed, refunded, cancelled],
+  );
 
   const filtered = useMemo(() => {
     if (!query.trim()) return history;
