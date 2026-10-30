@@ -33,7 +33,7 @@ function mapCartItem(it) {
 }
 
 export function CartProvider({ children }) {
-  const { user, hydrated: authHydrated } = useAuth();
+  const { user, hydrated: authHydrated, openAuth } = useAuth();
   const userId = user?.userId;
 
   const [items, setItems] = useState([]);
@@ -58,13 +58,9 @@ export function CartProvider({ children }) {
     if (!authHydrated) return;
 
     async function init() {
+      // tamu tidak punya cart (wajib login); sisa cart tamu versi lama tetap dipindahkan saat login
       if (!userId) {
-        try {
-          const raw = window.localStorage.getItem(STORAGE_KEY);
-          setItems(raw ? JSON.parse(raw) : []);
-        } catch (e) {
-          setItems([]);
-        }
+        setItems([]);
         setHydrated(true);
         return;
       }
@@ -91,45 +87,23 @@ export function CartProvider({ children }) {
     init();
   }, [authHydrated, userId, loadCart]);
 
-  useEffect(() => {
-    if (!hydrated || userId) return;
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    } catch (e) {
-      // ignore write failures
-    }
-  }, [items, hydrated, userId]);
+// (cart tamu di localStorage tidak dipakai lagi: Add to cart / Buy now wajib login)
+
+  // tamu tidak bisa memakai cart / checkout -> minta login dulu (modal login global)
+  function requireLogin(message) {
+    if (userId) return true;
+    toast.info(message);
+    openAuth("login");
+    return false;
+  }
 
   async function addItem(product, qty = 1) {
+    if (!requireLogin("Log in dulu untuk menambahkan produk ke cart.")) return false;
+
     // jangan proses produk yang stoknya habis
     if (typeof product.stock === "number" && product.stock <= 0) {
       toast.warning("Stok produk ini sudah habis.");
       return false;
-    }
-
-    if (!userId) {
-      setItems((prev) => {
-        const existing = prev.find((it) => it.id === product.id);
-        if (existing) {
-          return prev.map((it) =>
-            it.id === product.id ? { ...it, qty: it.qty + qty } : it,
-          );
-        }
-        return [
-          ...prev,
-          {
-            id: product.id,
-            name: product.name,
-            image: product.slug,
-            price: product.price,
-            category: product.category,
-            qty,
-            selected: true,
-          },
-        ];
-      });
-      setBump((b) => b + 1);
-      return true;
     }
 
     try {
@@ -245,6 +219,60 @@ export function CartProvider({ children }) {
     );
   }
 
+  // "Buy now": checkout langsung produk ini dengan jumlah yang dipilih, tanpa ikut membayar item lain di cart.
+  // Backend checkout memakai item cart yang dipilih, jadi: pastikan produk ada di cart dengan qty = qty
+  // yang dipilih, pilih HANYA produk ini, lalu halaman payment memproses produk ini saja.
+  async function buyNow(product, qty = 1) {
+    if (!requireLogin("Log in dulu untuk membeli produk ini.")) return false;
+    if (typeof product.stock === "number" && product.stock <= 0) {
+      toast.warning("Stok produk ini sudah habis.");
+      return false;
+    }
+
+    try {
+      let fresh = await loadCart();
+      let line = fresh.find((it) => it.id === product.id);
+      if (!line) {
+        const res = await cartService.AddToCart(userId, product.id);
+        if (!res.status) {
+          toast.error(res.message);
+          return false;
+        }
+        fresh = await loadCart();
+        line = fresh.find((it) => it.id === product.id);
+      }
+      if (!line) {
+        toast.error("Gagal menyiapkan pembelian, coba lagi.");
+        return false;
+      }
+
+      if (line.qty !== qty || !line.selected) {
+        const upd = await cartService.UpdateCart(userId, {
+          cartId: line.cartId,
+          quantity: qty,
+          isSelected: true,
+        });
+        if (!upd.status) {
+          toast.error(upd.message);
+          return false;
+        }
+      }
+
+      // item lain tetap di cart, hanya tidak dipilih untuk checkout ini
+      await Promise.all(
+        fresh
+          .filter((it) => it.id !== product.id && it.selected)
+          .map((it) => cartService.SelectCart(userId, it.cartId, false)),
+      );
+
+      const latest = await loadCart();
+      return latest.some((it) => it.id === product.id && it.selected);
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Gagal memproses Buy now."));
+      return false;
+    }
+  }
+
   // Checkout di backend sudah menghapus item yang dibayar dari cart,
   // jadi cukup muat ulang cart dari server.
   async function checkoutSelected() {
@@ -282,6 +310,7 @@ export function CartProvider({ children }) {
         toggleSelect,
         selectAll,
         selectOnly,
+        buyNow,
         checkoutSelected,
         refreshCart: loadCart,
         totalCount,

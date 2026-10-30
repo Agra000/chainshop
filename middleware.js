@@ -1,15 +1,12 @@
 import { NextResponse } from "next/server";
-
-// Halaman yang wajib login (JWT di cookie "chainshop_token")
-const LOGIN_REQUIRED = ["/profile", "/payment", "/transaction", "/history", "/seller", "/admin", "/faucet"];
-// Halaman yang wajib sudah punya toko (cookie "chainshop_store")
-const SELLER_REQUIRED = ["/seller"];
-// Halaman khusus admin / arbiter refund (cookie "chainshop_role"; backend tetap cek role di database)
-const ADMIN_REQUIRED = ["/admin"];
-
-function matches(pathname, prefixes) {
-  return prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
-}
+import {
+  ADMIN_REQUIRED,
+  AUTH_QUERY,
+  LOGIN_REQUIRED,
+  NEXT_QUERY,
+  SELLER_REQUIRED,
+  matchesRoute,
+} from "@/lib/routes";
 
 function decodeJwtExp(token) {
   try {
@@ -27,22 +24,21 @@ function isLoggedIn(req) {
 }
 
 function isAllowed(pathname, loggedIn, hasStore, isAdmin) {
-  if (matches(pathname, LOGIN_REQUIRED) && !loggedIn) return false;
-  if (matches(pathname, SELLER_REQUIRED) && !hasStore) return false;
-  if (matches(pathname, ADMIN_REQUIRED) && !isAdmin) return false;
+  if (matchesRoute(pathname, LOGIN_REQUIRED) && !loggedIn) return false;
+  if (matchesRoute(pathname, SELLER_REQUIRED) && !hasStore) return false;
+  if (matchesRoute(pathname, ADMIN_REQUIRED) && !isAdmin) return false;
   return true;
 }
 
 export function middleware(req) {
-  const { pathname } = req.nextUrl;
+  const { pathname, search } = req.nextUrl;
   const loggedIn = isLoggedIn(req);
   const hasStore = loggedIn && !!req.cookies.get("chainshop_store")?.value;
   const isAdmin = loggedIn && req.cookies.get("chainshop_role")?.value === "admin";
 
   if (isAllowed(pathname, loggedIn, hasStore, isAdmin)) return NextResponse.next();
 
-  // langsung kembalikan ke halaman sebelumnya (Referer, origin yang sama),
-  // atau ke beranda jika tidak ada / halaman sebelumnya juga tidak boleh diakses
+  // kembali ke halaman sebelumnya (Referer, origin yang sama) atau ke beranda
   let fallback = new URL("/", req.url);
   const referer = req.headers.get("referer");
   if (referer) {
@@ -60,13 +56,24 @@ export function middleware(req) {
     }
   }
 
-  return NextResponse.redirect(fallback);
+  // belum login -> buka modal login, lalu lanjut ke halaman tujuan setelah berhasil login
+  if (!loggedIn) {
+    fallback.searchParams.set(AUTH_QUERY, "login");
+    fallback.searchParams.set(NEXT_QUERY, `${pathname}${search}`);
+  }
+
+  // jangan simpan hasil redirect di cache router / CDN (halaman tergantung status login)
+  const res = NextResponse.redirect(fallback);
+  res.headers.set("Cache-Control", "no-store");
+  return res;
 }
 
+// matcher harus literal (dibaca saat build), samakan dengan LOGIN_REQUIRED di lib/routes.js
 export const config = {
   matcher: [
-    "/profile/:path*",
+    "/cart/:path*",
     "/payment/:path*",
+    "/profile/:path*",
     "/transaction/:path*",
     "/history/:path*",
     "/seller/:path*",
