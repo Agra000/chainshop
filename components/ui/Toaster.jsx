@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { AlertTriangle, CheckCircle2, Info, X, XCircle } from "lucide-react";
 import { TOAST_EVENT } from "@/lib/toast";
 
@@ -106,8 +107,16 @@ function ToastItem({ toast, onDismiss }) {
   );
 }
 
+// toast selalu di atas semua modal (Modal / DeleteStoreModal memakai z-[100])
+const TOAST_Z_INDEX = 99999;
+
 export function Toaster() {
   const [toasts, setToasts] = useState([]);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const dismiss = useCallback((id) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -130,14 +139,19 @@ export function Toaster() {
     return () => window.removeEventListener(TOAST_EVENT, handle);
   }, []);
 
-  return (
+  if (!mounted) return null;
+
+  // portal ke <body> (setelah modal) supaya tidak terjebak stacking context parent
+  return createPortal(
     <div
       aria-live="polite"
-      className="pointer-events-none fixed inset-x-0 top-3 z-[100] flex flex-col items-center gap-2 px-4 sm:inset-x-auto sm:right-4 sm:top-4 sm:w-[360px] sm:items-stretch sm:px-0"
+      style={{ zIndex: TOAST_Z_INDEX }}
+      className="pointer-events-none fixed inset-x-0 top-3 flex flex-col items-center gap-2 px-4 sm:inset-x-auto sm:right-4 sm:top-4 sm:w-[360px] sm:items-stretch sm:px-0"
     >
       {toasts.map((t) => (
         <ToastItem key={t.id} toast={t} onDismiss={dismiss} />
       ))}
-    </div>
+    </div>,
+    document.body,
   );
 }

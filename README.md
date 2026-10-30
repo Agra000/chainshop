@@ -4,10 +4,36 @@ Frontend marketplace web3 (Next.js 14 App Router + Tailwind CSS) untuk ChainShop
 tampilan seperti Tokopedia/Shopee/Amazon, tapi setiap pembayaran "ditahan" di
 escrow dan baru cair ke seller setelah pembeli konfirmasi barang diterima.
 
-**Status saat ini: frontend only, dengan data dummy.** Belum ada smart contract
-sungguhan atau backend — semua state (login, cart, transaksi, status escrow)
-disimpan di `localStorage` browser lewat React Context, supaya alurnya bisa
-langsung dicoba end-to-end tanpa server.
+**Status saat ini:** terhubung ke backend .NET (repo `chainshop_b`) dan smart contract
+escrow di Sepolia testnet (folder `chainshop-contracts`).
+
+## Escrow on-chain (Sepolia testnet, Mock USDT)
+
+Pembayaran sekarang memakai smart contract `ChainShopEscrow` + token `MockUSDT` (mUSDT)
+di **Sepolia testnet** — tidak ada uang asli. Source contract ada di folder
+`chainshop-contracts` (lihat README di sana untuk deploy).
+
+1. Salin `.env.example` menjadi `.env.local`, isi `NEXT_PUBLIC_ESCROW_ADDRESS` dan
+   `NEXT_PUBLIC_MUSDT_ADDRESS` dari output deploy.
+2. `npm install` (dependency baru: `viem`), lalu `npm run dev`.
+3. Wallet MetaMask di jaringan Sepolia butuh sedikit Sepolia ETH (gas) dan mUSDT
+   (klaim di halaman **/faucet**, 10.000 mUSDT per 24 jam).
+
+Alur singkat (v3, hemat gas — hanya aksi uang + invoice yang on-chain):
+
+- **Checkout** dipecah per seller (1 order = 1 escrow = 1 invoice). Buyer membayar harga barang + ongkir +
+  estimasi gas (±) untuk 2 transaksi seller (kirim + klaim dana); seluruh estimasi gas diberikan ke seller.
+- **Seller** acc order, pilih kurir + driver, klik **Ship & record invoice** → nomor resi di-generate backend dan invoice tercatat on-chain (event `InvoiceRecorded`).
+  Status mock "On the way" dan "Arrived at buyer" tidak memakai MetaMask.
+- **Buyer** punya 3 hari untuk **Accept** (cukup **tanda tangan** EIP-712 di MetaMask: gratis, tanpa gas) atau **Request refund** (tanpa MetaMask: alasan,
+  foto, ID transaksi invoice; maksimal 3x). Tidak merespons = otomatis diterima oleh cron backend.
+- Setelah buyer accept, **seller** klik **Claim payment** (MetaMask `releaseWithAcceptance`, gas dibayar seller)
+  untuk mencairkan dana. Contract memverifikasi tanda tangan buyer.
+- **Admin** (role `admin` di `msusers`) memutuskan refund di menu profil → **Refund Arbitration**. Tolak dan
+  setujui-dengan-retur tanpa MetaMask (konfirmasi lewat modal); setujui refund "barang tak sampai" memakai MetaMask (`refund`).
+- **Retur** dicatat tanpa MetaMask; seller konfirmasi retur dengan MetaMask (`refund`).
+- Batas waktu dijalankan cron backend (wallet operator). Buyer tetap bisa membatalkan sendiri on-chain jika
+  seller tidak mengirim sebelum batas waktu.
 
 ## Menjalankan project
 

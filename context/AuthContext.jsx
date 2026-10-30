@@ -5,8 +5,10 @@ import { authService } from "@/services/AuthService";
 import { sellerservice } from "@/services/SellerService";
 import { getApiErrorMessage } from "@/lib/axios";
 import {
+  clearRoleCookie,
   clearStoreCookie,
   clearToken,
+  setRoleCookie,
   setStoreCookie,
   getTokenUserId,
   isTokenValid,
@@ -26,6 +28,7 @@ export function AuthProvider({ children }) {
   const logout = useCallback(() => {
     clearToken();
     clearStoreCookie();
+    clearRoleCookie();
     setUser(null);
   }, []);
 
@@ -48,6 +51,7 @@ export function AuthProvider({ children }) {
           storeId: res.storeId,
           storeName: res.storeName,
           walletAddress: res.walletAddress,
+          role: res.role || "user",
         }));
         return res;
       } else {
@@ -97,6 +101,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     function handleExpired() {
       clearStoreCookie();
+      clearRoleCookie();
       setUser(null);
     }
     window.addEventListener(SESSION_EXPIRED_EVENT, handleExpired);
@@ -250,7 +255,14 @@ export function AuthProvider({ children }) {
     else if (!user || user.storeId === "") clearStoreCookie();
   }, [hydrated, user, user?.storeId]);
 
+  // role admin (= arbiter refund) dari database -> cookie untuk middleware /admin
+  useEffect(() => {
+    if (!hydrated) return;
+    setRoleCookie(user?.role);
+  }, [hydrated, user?.role]);
+
   const isSeller = !!user?.storeId;
+  const isAdmin = user?.role === "admin";
 
   return (
     <AuthContext.Provider
@@ -259,6 +271,7 @@ export function AuthProvider({ children }) {
         isLoggedIn: !!user,
         isLoading,
         isSeller,
+        isAdmin,
         login,
         loginWithWallet,
         logout,
