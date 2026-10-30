@@ -18,7 +18,13 @@ const FILTERS = [
   { value: "shipped", label: "Shipped" },
   { value: "in_transit", label: "On the way" },
   { value: "delivered", label: "Arrived" },
+  { value: "refund_requested", label: "Refund requested" },
+  { value: "return_pending", label: "Return pending" },
+  { value: "return_shipped", label: "Return shipped" },
+  { value: "return_delivered", label: "Return arrived" },
+  { value: "accepted", label: "Ready to claim" },
   { value: "completed", label: "Completed" },
+  { value: "refunded", label: "Refunded" },
   { value: "cancelled", label: "Cancelled" },
 ];
 
