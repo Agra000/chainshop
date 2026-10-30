@@ -6,12 +6,19 @@ import { useCart } from "@/context/CartContext";
 import { BackButton } from "@/components/ui/BackButton";
 import { CartItemRow } from "@/components/cart/CartItemRow";
 import { EmptyState } from "@/components/common/EmptyState";
-import { formatIDR } from "@/lib/format";
+import { formatUSDT } from "@/lib/format";
+import { CartSkeleton } from "@/components/ui/Skeleton";
 
 export default function CartPage() {
   const router = useRouter();
-  const { items, selectAll, selectedItems, selectedCount, selectedSubtotal } =
-    useCart();
+  const {
+    items,
+    selectAll,
+    selectedItems,
+    selectedCount,
+    selectedSubtotal,
+    hydrated,
+  } = useCart();
 
   const allSelected = items.length > 0 && selectedItems.length === items.length;
 
@@ -27,7 +34,9 @@ export default function CartPage() {
         Shopping Cart
       </h1>
 
-      {items.length === 0 ? (
+      {!hydrated ? (
+        <CartSkeleton />
+      ) : items.length === 0 ? (
         <EmptyState
           icon={<ShoppingBag size={26} />}
           title="Your cart is empty"
@@ -52,7 +61,7 @@ export default function CartPage() {
         </div>
       )}
 
-      {items.length > 0 && (
+      {hydrated && items.length > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface/95 backdrop-blur">
           <div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
             <div>
@@ -60,7 +69,7 @@ export default function CartPage() {
                 Total ({selectedCount} item{selectedCount !== 1 ? "s" : ""})
               </p>
               <p className="font-display text-lg font-bold text-ink sm:text-xl">
-                {formatIDR(selectedSubtotal)}
+                {formatUSDT(selectedSubtotal)}
               </p>
             </div>
             <button

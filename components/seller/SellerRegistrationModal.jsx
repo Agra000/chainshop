@@ -11,11 +11,12 @@ import {
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { useAuth } from "@/context/AuthContext";
-import { shortenAddress } from "@/lib/format";
+import { shortenAddress, isValidWalletAddress } from "@/lib/format";
 import { sellerservice } from "@/services/SellerService";
 import { deleteImage, uploadImageIfNeeded } from "@/lib/upload";
 import { ShopImageUpload } from "./ShopImageUpload";
 import { PayoutToggle } from "./PayoutToggle";
+import { toast } from "@/lib/toast";
 
 export const CITIES = [
   "Jakarta Pusat",
@@ -54,6 +55,10 @@ export function SellerRegistrationModal({ open, onClose }) {
   const [form, setForm] = useState(EMPTY_FORM(user?.walletAddress));
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [walletTouched, setWalletTouched] = useState(false);
+
+  const walletInvalid = !isValidWalletAddress(form.payoutWallet);
+  const showWalletError = form.payoutMode === "other" && walletTouched && walletInvalid;
 
   // Keep payoutWallet in sync when mode switches to "own"
   useEffect(() => {
@@ -77,11 +82,16 @@ export function SellerRegistrationModal({ open, onClose }) {
       payoutMode: mode,
       payoutWallet: mode === "own" ? (user?.walletAddress ?? "") : "",
     }));
+    setWalletTouched(false);
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.shopName.trim()) return;
+    if (form.payoutMode === "other" && walletInvalid) {
+      setWalletTouched(true);
+      return;
+    }
 
     setSubmitting(true);
     // setErrorMessage("");
@@ -103,7 +113,7 @@ export function SellerRegistrationModal({ open, onClose }) {
       const res = await sellerservice.becomeSeller(user.userId, dataPayload);
       if (!res.status) {
         if (shopImage.uploaded) await deleteImage(user.userId, shopImage.url);
-        alert(res.message);
+        toast.error(res.message);
         return;
       }
       await getUserInfo();
@@ -112,7 +122,7 @@ export function SellerRegistrationModal({ open, onClose }) {
     } catch (error) {
       console.error("Error registering seller:", error);
       if (shopImage.uploaded) await deleteImage(user.userId, shopImage.url);
-      alert(error.message || "Failed to open shop.");
+      toast.error(error.message || "Failed to open shop.");
     } finally {
       // Matikan status loading terlepas dari berhasil atau gagal
       setSubmitting(false);
@@ -249,16 +259,27 @@ export function SellerRegistrationModal({ open, onClose }) {
               <div className="mt-2">
                 <input
                   value={form.payoutWallet}
-                  onChange={set("payoutWallet")}
+                  onChange={(e) => set("payoutWallet")(e.target.value.trim())}
+                  onBlur={() => setWalletTouched(true)}
+                  maxLength={42}
+                  spellCheck={false}
+                  aria-invalid={showWalletError}
                   disabled={form.payoutMode === "own"}
                   placeholder="0x..."
                   className={`input-field font-mono text-xs ${
+                    showWalletError ? "border-danger focus:border-danger " : ""
+                  }${
                     form.payoutMode === "own"
                       ? "cursor-not-allowed bg-paper text-ink-faint"
                       : ""
                   }`}
                   required
                 />
+                {showWalletError && (
+                  <p className="mt-1 text-xs text-danger">
+                    Invalid wallet address. It must start with 0x followed by 40 hex characters (0-9, a-f).
+                  </p>
+                )}
                 {form.payoutMode === "own" && user?.walletAddress && (
                   <p className="mt-1 text-xs text-ink-faint">
                     Using{" "}

@@ -17,11 +17,13 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { BackButton } from "@/components/ui/BackButton";
 import { EmptyState } from "@/components/common/EmptyState";
-import { shortenAddress, formatDate, formatIDR } from "@/lib/format";
+import { SellerDashboardSkeleton } from "@/components/ui/Skeleton";
+import { shortenAddress, formatDate, formatUSDT } from "@/lib/format";
 import { sellerservice } from "@/services/SellerService";
 import DeleteStoreModal from "@/components/seller/DeleteStoreModal";
 import { mapProduct } from "@/data/products";
 import { getApiErrorMessage } from "@/lib/axios";
+import { toast } from "@/lib/toast";
 
 export default function SellerDashboardPage() {
   const { user, deleteShop, hydrated } = useAuth();
@@ -30,6 +32,7 @@ export default function SellerDashboardPage() {
   const [dashboard, setDashboard] = useState(null);
   const [deleteModal, setDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -44,12 +47,17 @@ export default function SellerDashboardPage() {
     if (!user?.storeId) return;
 
     async function loadData() {
-      const [info, dash] = await Promise.all([
-        sellerservice.GetSellerInfo(user.storeId),
-        sellerservice.GetSellerDashboard(user.storeId),
-      ]);
-      setShop(info);
-      if (dash.status) setDashboard(dash);
+      setLoadingData(true);
+      try {
+        const [info, dash] = await Promise.all([
+          sellerservice.GetSellerInfo(user.storeId),
+          sellerservice.GetSellerDashboard(user.storeId),
+        ]);
+        setShop(info);
+        if (dash.status) setDashboard(dash);
+      } finally {
+        setLoadingData(false);
+      }
     }
 
     loadData();
@@ -94,7 +102,7 @@ export default function SellerDashboardPage() {
         router.replace("/");
       }
     } catch (error) {
-      alert(getApiErrorMessage(error, "Failed to delete store."));
+      toast.error(getApiErrorMessage(error, "Failed to delete store."));
     } finally {
       setDeleting(false);
     }
@@ -107,6 +115,9 @@ export default function SellerDashboardPage() {
         Seller Dashboard
       </h1>
 
+      {!hydrated || loadingData ? (
+        <SellerDashboardSkeleton />
+      ) : (
       <div className="grid gap-5 md:grid-cols-[280px_1fr] md:items-start">
         {/* ── Shop identity card ── */}
         <div className="flex flex-col gap-3">
@@ -251,7 +262,7 @@ export default function SellerDashboardPage() {
                         {p.name}
                       </p>
                       <p className="mt-0.5 text-xs text-ink-soft">
-                        {formatIDR(p.price)} ·{" "}
+                        {formatUSDT(p.price)} ·{" "}
                         <span className="inline-flex items-center gap-1">
                           <Boxes size={11} className="inline" />
                           {p.stock} in stock
@@ -289,6 +300,7 @@ export default function SellerDashboardPage() {
           </section>
         </div>
       </div>
+      )}
 
       <DeleteStoreModal
         shopName={shop.shopName}

@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 
 // Halaman yang wajib login (JWT di cookie "chainshop_token")
-const LOGIN_REQUIRED = ["/profile", "/payment", "/transaction", "/history", "/seller"];
+const LOGIN_REQUIRED = ["/profile", "/payment", "/transaction", "/history", "/seller", "/admin", "/faucet"];
 // Halaman yang wajib sudah punya toko (cookie "chainshop_store")
 const SELLER_REQUIRED = ["/seller"];
+// Halaman khusus admin / arbiter refund (cookie "chainshop_role"; backend tetap cek role di database)
+const ADMIN_REQUIRED = ["/admin"];
 
 function matches(pathname, prefixes) {
   return prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
@@ -24,9 +26,10 @@ function isLoggedIn(req) {
   return !!token && decodeJwtExp(token) > Date.now();
 }
 
-function isAllowed(pathname, loggedIn, hasStore) {
+function isAllowed(pathname, loggedIn, hasStore, isAdmin) {
   if (matches(pathname, LOGIN_REQUIRED) && !loggedIn) return false;
   if (matches(pathname, SELLER_REQUIRED) && !hasStore) return false;
+  if (matches(pathname, ADMIN_REQUIRED) && !isAdmin) return false;
   return true;
 }
 
@@ -34,8 +37,9 @@ export function middleware(req) {
   const { pathname } = req.nextUrl;
   const loggedIn = isLoggedIn(req);
   const hasStore = loggedIn && !!req.cookies.get("chainshop_store")?.value;
+  const isAdmin = loggedIn && req.cookies.get("chainshop_role")?.value === "admin";
 
-  if (isAllowed(pathname, loggedIn, hasStore)) return NextResponse.next();
+  if (isAllowed(pathname, loggedIn, hasStore, isAdmin)) return NextResponse.next();
 
   // langsung kembalikan ke halaman sebelumnya (Referer, origin yang sama),
   // atau ke beranda jika tidak ada / halaman sebelumnya juga tidak boleh diakses
@@ -47,7 +51,7 @@ export function middleware(req) {
       if (
         prev.origin === req.nextUrl.origin &&
         prev.pathname !== pathname &&
-        isAllowed(prev.pathname, loggedIn, hasStore)
+        isAllowed(prev.pathname, loggedIn, hasStore, isAdmin)
       ) {
         fallback = prev;
       }
@@ -66,5 +70,7 @@ export const config = {
     "/transaction/:path*",
     "/history/:path*",
     "/seller/:path*",
+    "/admin/:path*",
+    "/faucet/:path*",
   ],
 };

@@ -6,11 +6,12 @@ import { useTransactions } from "@/context/TransactionContext";
 import { BackButton } from "@/components/ui/BackButton";
 import { OrderCard } from "@/components/transaction/OrderCard";
 import { EmptyState } from "@/components/common/EmptyState";
+import { OrderListPageSkeleton } from "@/components/ui/Skeleton";
 
 export default function TransactionListPage() {
   const { ongoing, completed, hydrated } = useTransactions();
 
-  if (!hydrated) return null;
+  if (!hydrated) return <OrderListPageSkeleton />;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-4 sm:px-6 lg:px-8">

@@ -5,13 +5,14 @@ import { notFound } from "next/navigation";
 import { MapPin, Store } from "lucide-react";
 import { getProductById, getRelatedProducts } from "@/data/products";
 import { reviewService } from "@/services/ReviewService";
-import { formatDate, formatIDR } from "@/lib/format";
+import { formatDate, formatUSDT } from "@/lib/format";
 import { BackButton } from "@/components/ui/BackButton";
 import { RatingStars } from "@/components/common/RatingStars";
 import { EscrowBadge } from "@/components/common/EscrowBadge";
 import { ProductGallery } from "@/components/product/ProductGallery";
 import { ProductActions } from "@/components/product/ProductActions";
 import { ProductGrid } from "@/components/product/ProductGrid";
+import { ProductDetailSkeleton } from "@/components/ui/Skeleton";
 
 export default function ProductDetailPage({ params }) {
   const [product, setProduct] = useState(null);
@@ -38,8 +39,7 @@ export default function ProductDetailPage({ params }) {
     loadData();
   }, [params.id]);
 
-  if (loading)
-    return <p className="p-8 text-center text-ink-faint">Loading produk...</p>;
+  if (loading) return <ProductDetailSkeleton />;
 
   if (!product) notFound();
 
@@ -67,7 +67,7 @@ export default function ProductDetailPage({ params }) {
           </div>
 
           <p className="font-display text-3xl font-bold text-ink">
-            {formatIDR(product.price)}
+            {formatUSDT(product.price)}
           </p>
 
           <EscrowBadge className="w-fit" text="Payment held in escrow until delivered" />

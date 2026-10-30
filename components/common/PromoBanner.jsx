@@ -10,7 +10,7 @@ export function PromoBanner() {
             <span className="text-navbar">Your money waits in escrow until the order lands.</span>
           </h1>
           <p className="mt-3 max-w-md text-[15px] text-ink-soft">
-            Prices are in Rupiah, checkout feels like any marketplace — the
+            Prices are in USDT, checkout feels like any marketplace — the
             difference is what happens after you pay: funds sit in a smart
             contract and only reach the seller once you confirm the parcel
             arrived.

@@ -3,11 +3,15 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Minus, Plus, Trash2 } from "lucide-react";
-import { formatIDR } from "@/lib/format";
+import { formatUSDT } from "@/lib/format";
 import { useCart } from "@/context/CartContext";
 
 export function CartItemRow({ item }) {
   const { toggleSelect, setQty, removeItem } = useCart();
+  // stock hanya tersedia untuk cart dari backend (user login)
+  const hasStock = typeof item.stock === "number";
+  const outOfStock = hasStock && item.stock <= 0;
+  const atMax = hasStock && item.qty >= item.stock;
 
   return (
     <div className="flex items-center gap-3 border-b border-border py-4 last:border-b-0 sm:gap-4">
@@ -33,8 +37,13 @@ export function CartItemRow({ item }) {
           {item.name}
         </Link>
         <p className="mt-1 font-display text-sm font-semibold text-ink sm:text-base">
-          {formatIDR(item.price)}
+          {formatUSDT(item.price)}
         </p>
+        {outOfStock ? (
+          <p className="mt-0.5 text-xs font-medium text-danger">Stok habis</p>
+        ) : atMax ? (
+          <p className="mt-0.5 text-xs text-ink-faint">Maks. {item.stock} (stok tersisa)</p>
+        ) : null}
       </div>
 
       <div className="flex flex-col items-end gap-2">
@@ -51,7 +60,8 @@ export function CartItemRow({ item }) {
           <button
             type="button"
             onClick={() => setQty(item.id, item.qty + 1)}
-            className="flex h-7 w-7 items-center justify-center rounded-full text-ink-soft transition-colors duration-150 hover:bg-paper active:scale-90"
+            disabled={atMax || outOfStock}
+            className="flex h-7 w-7 items-center justify-center rounded-full text-ink-soft transition-colors duration-150 hover:bg-paper active:scale-90 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:active:scale-100"
             aria-label="Increase quantity"
           >
             <Plus size={12} />

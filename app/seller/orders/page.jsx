@@ -8,6 +8,7 @@ import { mapOrderSummary } from "@/context/TransactionContext";
 import { orderService } from "@/services/OrderService";
 import { BackButton } from "@/components/ui/BackButton";
 import { OrderCard } from "@/components/transaction/OrderCard";
+import { ListSkeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/common/EmptyState";
 
 const FILTERS = [
@@ -17,7 +18,13 @@ const FILTERS = [
   { value: "shipped", label: "Shipped" },
   { value: "in_transit", label: "On the way" },
   { value: "delivered", label: "Arrived" },
+  { value: "refund_requested", label: "Refund requested" },
+  { value: "return_pending", label: "Return pending" },
+  { value: "return_shipped", label: "Return shipped" },
+  { value: "return_delivered", label: "Return arrived" },
+  { value: "accepted", label: "Ready to claim" },
   { value: "completed", label: "Completed" },
+  { value: "refunded", label: "Refunded" },
   { value: "cancelled", label: "Cancelled" },
 ];
 
@@ -81,7 +88,7 @@ function SellerOrders() {
       </div>
 
       {loading ? (
-        <p className="p-8 text-center text-ink-faint">Loading orders...</p>
+        <ListSkeleton count={4} />
       ) : orders.length === 0 ? (
         <EmptyState
           icon={<PackageSearch size={26} />}

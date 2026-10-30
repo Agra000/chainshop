@@ -10,13 +10,15 @@ import {
   LogOut,
   Store,
   UserPlus,
+  Droplets,
+  Scale,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { Avatar } from "@/components/common/Avatar";
 import { SellerRegistrationModal } from "@/components/seller/SellerRegistrationModal";
 
 export function UserMenu() {
-  const { user, logout } = useAuth();
+  const { user, isAdmin, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const [sellerModalOpen, setSellerModalOpen] = useState(false);
   const menuRef = useRef(null);
@@ -36,6 +38,7 @@ export function UserMenu() {
     { href: "/profile", label: "Profile", icon: User },
     { href: "/transaction", label: "Transactions", icon: PackageSearch },
     { href: "/history", label: "History", icon: History },
+    { href: "/faucet", label: "mUSDT Faucet", icon: Droplets },
   ];
 
   function close() {
@@ -96,6 +99,29 @@ export function UserMenu() {
                       <Store size={14} className="text-seal-dark" />
                     </div>
                     <span className="truncate">{user.storeName}</span>
+                  </Link>
+                </div>
+                <div className="mx-3.5 my-1.5 h-px bg-border" />
+              </>
+            )}
+
+            {/* ── Admin (= arbiter refund), role diatur di database ── */}
+            {isAdmin && (
+              <>
+                <div className="px-3.5 pb-1 pt-2">
+                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-ink-faint">
+                    Admin
+                  </p>
+                  <Link
+                    href="/admin/refunds"
+                    role="menuitem"
+                    onClick={close}
+                    className="flex items-center gap-2.5 rounded-lg px-2 py-2 text-sm font-medium text-ink transition-colors duration-150 hover:bg-paper"
+                  >
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-signal-soft">
+                      <Scale size={14} className="text-signal-dark" />
+                    </div>
+                    <span className="truncate">Refund Arbitration</span>
                   </Link>
                 </div>
                 <div className="mx-3.5 my-1.5 h-px bg-border" />

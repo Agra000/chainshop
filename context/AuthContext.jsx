@@ -5,14 +5,17 @@ import { authService } from "@/services/AuthService";
 import { sellerservice } from "@/services/SellerService";
 import { getApiErrorMessage } from "@/lib/axios";
 import {
+  clearRoleCookie,
   clearStoreCookie,
   clearToken,
+  setRoleCookie,
   setStoreCookie,
   getTokenUserId,
   isTokenValid,
   setToken,
   SESSION_EXPIRED_EVENT,
 } from "@/lib/session";
+import { toast } from "@/lib/toast";
 
 const AuthContext = createContext(null);
 const STORAGE_KEY = "chainshop_user";
@@ -25,6 +28,7 @@ export function AuthProvider({ children }) {
   const logout = useCallback(() => {
     clearToken();
     clearStoreCookie();
+    clearRoleCookie();
     setUser(null);
   }, []);
 
@@ -43,10 +47,11 @@ export function AuthProvider({ children }) {
           phone: res.phone,
           city: res.city,
           authMethod: res.authMethod,
-          joinedAt: prev?.joinedAt || res.lastLoginAt || new Date().toISOString(),
+          joinedAt: res.joinedAt || prev?.joinedAt || new Date().toISOString(),
           storeId: res.storeId,
           storeName: res.storeName,
           walletAddress: res.walletAddress,
+          role: res.role || "user",
         }));
         return res;
       } else {
@@ -96,6 +101,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     function handleExpired() {
       clearStoreCookie();
+      clearRoleCookie();
       setUser(null);
     }
     window.addEventListener(SESSION_EXPIRED_EVENT, handleExpired);
@@ -127,7 +133,7 @@ export function AuthProvider({ children }) {
       if (mode === "signup") {
         const reg = await authService.register(payload);
         if (!reg.status) {
-          alert(reg.message);
+          toast.error(reg.message);
           return reg;
         }
       }
@@ -135,7 +141,7 @@ export function AuthProvider({ children }) {
       // Tembak ke API login backend
       const res = await authService.login(payload);
       if (!res.status) {
-        alert(res.message);
+        toast.error(res.message);
         return res;
       }
 
@@ -145,7 +151,7 @@ export function AuthProvider({ children }) {
       return res;
     } catch (error) {
       console.error("Email login error:", error);
-      alert(getApiErrorMessage(error, "Gagal melakukan login."));
+      toast.error(getApiErrorMessage(error, "Gagal melakukan login."));
       throw error;
     } finally {
       setIsLoading(false);
@@ -155,7 +161,7 @@ export function AuthProvider({ children }) {
   // 2. Fungsi Login Berbasis MetaMask Wallet
   async function loginWithWallet() {
     if (typeof window.ethereum === "undefined") {
-      alert("Silakan install ekstensi MetaMask di browser Anda!");
+      toast.warning("Silakan install ekstensi MetaMask di browser Anda!");
       return;
     }
 
@@ -176,13 +182,13 @@ export function AuthProvider({ children }) {
       if (res.status === true) {
         startSession({ ...res, walletAddress });
       } else {
-        alert(res.message);
+        toast.error(res.message);
       }
 
       return res;
     } catch (error) {
       console.error("Wallet login error:", error);
-      alert(getApiErrorMessage(error, "Gagal menghubungkan wallet."));
+      toast.error(getApiErrorMessage(error, "Gagal menghubungkan wallet."));
       throw error;
     } finally {
       setIsLoading(false);
@@ -200,13 +206,13 @@ export function AuthProvider({ children }) {
         city: partial.city ?? user.city,
       });
       if (!res.status) {
-        alert(res.message);
+        toast.error(res.message);
         return res;
       }
       await getUserInfo();
       return res;
     } catch (error) {
-      alert(getApiErrorMessage(error, "Gagal menyimpan profile."));
+      toast.error(getApiErrorMessage(error, "Gagal menyimpan profile."));
       throw error;
     }
   }
@@ -236,7 +242,7 @@ export function AuthProvider({ children }) {
     if (!user?.storeId) return;
     const res = await sellerservice.DeleteStore(user.storeId);
     if (!res.status) {
-      alert(res.message);
+      toast.error(res.message);
       return res;
     }
     setUser((prev) => (prev ? { ...prev, storeId: "", storeName: "" } : prev));
@@ -249,7 +255,14 @@ export function AuthProvider({ children }) {
     else if (!user || user.storeId === "") clearStoreCookie();
   }, [hydrated, user, user?.storeId]);
 
+  // role admin (= arbiter refund) dari database -> cookie untuk middleware /admin
+  useEffect(() => {
+    if (!hydrated) return;
+    setRoleCookie(user?.role);
+  }, [hydrated, user?.role]);
+
   const isSeller = !!user?.storeId;
+  const isAdmin = user?.role === "admin";
 
   return (
     <AuthContext.Provider
@@ -258,6 +271,7 @@ export function AuthProvider({ children }) {
         isLoggedIn: !!user,
         isLoading,
         isSeller,
+        isAdmin,
         login,
         loginWithWallet,
         logout,

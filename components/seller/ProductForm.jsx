@@ -14,7 +14,11 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { fetchCategories } from "@/data/categories";
-import { formatIDR } from "@/lib/format";
+import { formatUSDT } from "@/lib/format";
+
+// Minimum lengths in characters (letters, numbers and symbols all count).
+const MIN_NAME_LENGTH = 5;
+const MIN_DESCRIPTION_LENGTH = 10;
 
 export const EMPTY_PRODUCT_FORM = {
   name: "",
@@ -174,6 +178,8 @@ export function ProductForm({
   function validate() {
     const next = {};
     if (!form.name.trim()) next.name = "Product name is required.";
+    else if (form.name.trim().length < MIN_NAME_LENGTH)
+      next.name = `Product name must be at least ${MIN_NAME_LENGTH} characters.`;
     if (!form.category) next.category = "Pick a category.";
 
     const priceNum = Number(form.price);
@@ -186,12 +192,14 @@ export function ProductForm({
       form.stock === "" ||
       Number.isNaN(stockNum) ||
       !Number.isInteger(stockNum) ||
-      stockNum < 0
+      stockNum <= 0
     ) {
-      next.stock = "Enter a valid stock quantity.";
+      next.stock = "Stock must be a whole number greater than 0.";
     }
 
     if (!form.description.trim()) next.description = "Description is required.";
+    else if (form.description.trim().length < MIN_DESCRIPTION_LENGTH)
+      next.description = `Description must be at least ${MIN_DESCRIPTION_LENGTH} characters.`;
     if (!form.image) next.image = "Upload a product photo.";
 
     setErrors(next);
@@ -275,16 +283,16 @@ export function ProductForm({
         <div>
           <label className="mb-1 flex items-center gap-1.5 text-xs font-medium text-ink-soft">
             <Banknote size={12} />
-            Price (IDR)
+            Price (USDT)
           </label>
           <input
             type="number"
             min="0"
-            step="500"
+            step="0.01"
             inputMode="numeric"
             value={form.price}
             onChange={set("price")}
-            placeholder="e.g. 4299000"
+            placeholder="e.g. 25.00"
             className={`input-field ${errors.price ? "border-danger focus:border-danger" : ""}`}
           />
           {errors.price ? (
@@ -296,7 +304,7 @@ export function ProductForm({
             form.price !== "" &&
             !Number.isNaN(Number(form.price)) && (
               <p className="mt-1 text-[11px] text-ink-faint">
-                ≈ {formatIDR(Number(form.price))}
+                ≈ {formatUSDT(Number(form.price))}
               </p>
             )
           )}
@@ -309,7 +317,7 @@ export function ProductForm({
           </label>
           <input
             type="number"
-            min="0"
+            min="1"
             step="1"
             inputMode="numeric"
             value={form.stock}

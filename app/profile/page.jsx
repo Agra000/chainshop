@@ -1,17 +1,26 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Copy, Mail, ShieldCheck, Wallet } from "lucide-react";
+import { Check, Copy, Loader2, Mail, ShieldCheck, Wallet } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { BackButton } from "@/components/ui/BackButton";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Avatar } from "@/components/common/Avatar";
 import { formatDate, shortenAddress } from "@/lib/format";
+import { toast } from "@/lib/toast";
+import { ProfileSkeleton } from "@/components/ui/Skeleton";
+import { AddressBook } from "@/components/profile/AddressBook";
 
 export default function ProfilePage() {
   const { user, hydrated, updateProfile } = useAuth();
-  const [form, setForm] = useState({ name: "", email: "", phone: "", address: "" });
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+  });
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -25,7 +34,7 @@ export default function ProfilePage() {
     }
   }, [user]);
 
-  if (!hydrated) return null;
+  if (!hydrated) return <ProfileSkeleton />;
 
   if (!user) {
     return (
@@ -50,13 +59,16 @@ export default function ProfilePage() {
 
   async function handleSave(e) {
     e.preventDefault();
+    setSaving(true);
     const res = await updateProfile({
       name: form.name,
       email: form.email,
       phone: form.phone,
       city: form.address,
     }).catch(() => null);
+    setSaving(false);
     if (!res?.status) return;
+    toast.success("Profil berhasil disimpan.");
     setSaved(true);
     window.setTimeout(() => setSaved(false), 1800);
   }
@@ -64,6 +76,7 @@ export default function ProfilePage() {
   function handleCopy() {
     navigator.clipboard?.writeText(user.walletAddress).then(() => {
       setCopied(true);
+      toast.success("Alamat wallet disalin.", { duration: 2000 });
       window.setTimeout(() => setCopied(false), 1500);
     });
   }
@@ -71,16 +84,22 @@ export default function ProfilePage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-4 sm:px-6 lg:px-8">
       <BackButton />
-      <h1 className="mb-4 mt-1 font-display text-xl font-semibold text-ink">Profile</h1>
+      <h1 className="mb-4 mt-1 font-display text-xl font-semibold text-ink">
+        Profile
+      </h1>
 
       <div className="grid gap-5 md:grid-cols-[260px_1fr] md:items-start">
         {/* left: identity card */}
         <section className="card flex flex-col items-center gap-3 p-6 text-center">
           <Avatar name={user.name} seed={user.walletAddress} size={72} />
           <div>
-            <p className="font-display text-base font-semibold text-ink">{user.name}</p>
+            <p className="font-display text-base font-semibold text-ink">
+              {user.name}
+            </p>
             <p className="text-xs text-ink-faint">
-              {user.authMethod === "wallet" ? "Wallet account" : "Email account"}
+              {user.authMethod === "wallet"
+                ? "Wallet account"
+                : "Email account"}
             </p>
           </div>
 
@@ -104,70 +123,93 @@ export default function ProfilePage() {
                 aria-label="Copy wallet address"
                 className="icon-btn !h-7 !w-7 shrink-0"
               >
-                {copied ? <Check size={14} className="text-ledger" /> : <Copy size={14} />}
+                {copied ? (
+                  <Check size={14} className="text-ledger" />
+                ) : (
+                  <Copy size={14} />
+                )}
               </button>
             </div>
           </div>
         </section>
 
-        {/* right: editable details */}
-        <section className="card p-5 sm:p-6">
-          <h2 className="font-display text-base font-semibold text-ink">
-            Personal information
-          </h2>
-          <p className="mt-1 text-sm text-ink-soft">
-            Used for order confirmations and delivery — nothing here is shared publicly.
-          </p>
+        {/* right: editable details + alamat */}
+        <div className="flex flex-col gap-5">
+          <section className="card p-5 sm:p-6">
+            <h2 className="font-display text-base font-semibold text-ink">
+              Personal information
+            </h2>
+            <p className="mt-1 text-sm text-ink-soft">
+              Used for order confirmations and delivery — nothing here is shared
+              publicly.
+            </p>
 
-          <form onSubmit={handleSave} className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-1">
-              <label className="mb-1 block text-xs font-medium text-ink-soft">Full name</label>
-              <input
-                value={form.name}
-                onChange={handleChange("name")}
-                className="input-field"
-                required
-              />
-            </div>
-            <div className="sm:col-span-1">
-              <label className="mb-1 flex items-center gap-1 text-xs font-medium text-ink-soft">
-                <Mail size={12} /> Email
-              </label>
-              <input
-                type="email"
-                value={form.email}
-                onChange={handleChange("email")}
-                placeholder="you@example.com"
-                className="input-field"
-              />
-            </div>
-            <div className="sm:col-span-1">
-              <label className="mb-1 block text-xs font-medium text-ink-soft">Phone number</label>
-              <input
-                value={form.phone}
-                onChange={handleChange("phone")}
-                placeholder="08xx-xxxx-xxxx"
-                className="input-field"
-              />
-            </div>
-            <div className="sm:col-span-1">
-              <label className="mb-1 block text-xs font-medium text-ink-soft">City</label>
-              <input
-                value={form.address}
-                onChange={handleChange("address")}
-                placeholder="e.g. Jakarta Selatan"
-                className="input-field"
-              />
-            </div>
+            <form
+              onSubmit={handleSave}
+              className="mt-4 grid gap-4 sm:grid-cols-2"
+            >
+              <div className="sm:col-span-1">
+                <label className="mb-1 block text-xs font-medium text-ink-soft">
+                  Full name
+                </label>
+                <input
+                  value={form.name}
+                  onChange={handleChange("name")}
+                  className="input-field"
+                  required
+                />
+              </div>
+              <div className="sm:col-span-1">
+                <label className="mb-1 flex items-center gap-1 text-xs font-medium text-ink-soft">
+                  <Mail size={12} /> Email
+                </label>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={handleChange("email")}
+                  placeholder="you@example.com"
+                  className="input-field"
+                />
+              </div>
+              <div className="sm:col-span-1">
+                <label className="mb-1 block text-xs font-medium text-ink-soft">
+                  Phone number
+                </label>
+                <input
+                  value={form.phone}
+                  onChange={handleChange("phone")}
+                  placeholder="08xx-xxxx-xxxx"
+                  className="input-field"
+                />
+              </div>
+              <div className="sm:col-span-1">
+                <label className="mb-1 block text-xs font-medium text-ink-soft">
+                  City
+                </label>
+                <input
+                  value={form.address}
+                  onChange={handleChange("address")}
+                  placeholder="e.g. Jakarta Selatan"
+                  className="input-field"
+                />
+              </div>
 
-            <div className="flex items-center gap-3 pt-1 sm:col-span-2">
-              <button type="submit" className="btn-primary">
-                {saved ? <Check size={16} /> : null}
-                {saved ? "Saved" : "Save changes"}
-              </button>
-            </div>
-          </form>
-        </section>
+              <div className="flex items-center gap-3 pt-1 sm:col-span-2">
+                <button type="submit" disabled={saving} className="btn-primary">
+                  {saving ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : saved ? (
+                    <Check size={16} />
+                  ) : null}
+                  {saving ? "Saving…" : saved ? "Saved" : "Save changes"}
+                </button>
+              </div>
+            </form>
+          </section>
+
+          {/* alamat pengiriman */}
+          <AddressBook userId={user.userId} />
+        </div>
       </div>
     </div>
   );

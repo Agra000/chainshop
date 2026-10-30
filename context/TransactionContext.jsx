@@ -5,12 +5,18 @@ import { useAuth } from "@/context/AuthContext";
 import { orderService } from "@/services/OrderService";
 import { cartService } from "@/services/CartService";
 import { reviewService } from "@/services/ReviewService";
-import { holdEscrow, releaseEscrow } from "@/lib/blockchain";
+import { refundService } from "@/services/RefundService";
+import {
+  cancelExpiredOnchain,
+  depositOrder,
+  ensureAllowance,
+  getChainErrorMessage,
+  signAcceptance,
+} from "@/lib/blockchain";
 import { getApiErrorMessage } from "@/lib/axios";
+import { PAYMENT_METHODS } from "@/components/payment/PaymentMethodSelector";
 
 const TransactionContext = createContext(null);
-// biaya tambahan (ongkir & gas fee) yang tidak disimpan di backend
-const META_STORAGE_KEY = "chainshop_order_meta";
 
 export const ORDER_STAGES = [
   "Order Placed",
@@ -29,14 +35,44 @@ export const STATUS_STAGE = {
   shipped: 2,
   in_transit: 3,
   delivered: 4,
+  refund_requested: 4,
+  return_pending: 4,
+  return_shipped: 4,
+  return_delivered: 4,
+  accepted: 4,
   completed: 5,
+  refunded: 5,
   cancelled: 0,
 };
 
 export const STATUS_LABEL = {
   pending_payment: "Waiting for Payment",
+  paid: "Waiting for Seller",
+  processing: "Packing",
+  refund_requested: "Refund Requested",
+  return_pending: "Return the Item",
+  return_shipped: "Return Shipped",
+  return_delivered: "Return Arrived",
+  accepted: "Accepted · Awaiting Seller Claim",
+  refunded: "Refunded",
   cancelled: "Cancelled",
 };
+
+// status yang dananya masih tertahan di escrow
+export const HELD_STATUSES = [
+  "paid",
+  "processing",
+  "shipped",
+  "in_transit",
+  "delivered",
+  "refund_requested",
+  "return_pending",
+  "return_shipped",
+  "return_delivered",
+  "accepted",
+];
+export const FINISHED_STATUSES = ["completed", "refunded", "cancelled"];
+export const REFUND_STATUSES = ["refund_requested", "return_pending", "return_shipped", "return_delivered"];
 
 // backend mengirim "yyyy-MM-dd HH:mm:ss" (UTC)
 export function toIsoDate(value) {
@@ -44,34 +80,20 @@ export function toIsoDate(value) {
   return value.includes("T") ? value : `${value.replace(" ", "T")}Z`;
 }
 
-function readMeta() {
-  try {
-    return JSON.parse(window.localStorage.getItem(META_STORAGE_KEY) || "{}");
-  } catch (e) {
-    return {};
+function stageFor(status, statusBeforeRefund) {
+  // refund "barang tak sampai" -> timeline tetap di tahap pengiriman terakhir
+  if (status === "refund_requested" && statusBeforeRefund && statusBeforeRefund !== "delivered") {
+    return STATUS_STAGE[statusBeforeRefund] ?? 4;
   }
+  return STATUS_STAGE[status] ?? 0;
 }
 
-function saveMeta(orderId, meta) {
-  try {
-    const all = readMeta();
-    all[orderId] = meta;
-    window.localStorage.setItem(META_STORAGE_KEY, JSON.stringify(all));
-  } catch (e) {
-    // ignore write failures
-  }
-}
-
-function withFees(orderId, subtotal) {
-  const meta = readMeta()[orderId] || {};
-  const shippingFee = meta.shippingFee ?? 0;
-  const gasFee = meta.gasFee ?? 0;
-  return { meta, shippingFee, gasFee, total: subtotal + shippingFee + gasFee };
+function paymentLabel(method) {
+  return PAYMENT_METHODS.find((m) => m.id === method)?.label || method;
 }
 
 // list order (GetOrderResponse) -> bentuk yang dipakai OrderCard
 export function mapOrderSummary(o) {
-  const { total } = withFees(o.id, o.totalIdr);
   return {
     id: o.id,
     code: o.orderCode,
@@ -83,21 +105,21 @@ export function mapOrderSummary(o) {
     buyerName: o.buyerName,
     shopName: o.shopName,
     subtotal: o.totalIdr,
-    total,
+    total: o.totalIdr,
     trackingNumber: o.trackingNumber,
+    refundCount: o.refundCount ?? 0,
     createdAt: toIsoDate(o.createdAt),
   };
 }
 
 // detail order (GetOrderDetailResponse) -> bentuk yang dipakai halaman detail
 export function mapOrderDetail(d) {
-  const { meta, shippingFee, gasFee, total } = withFees(d.orderId, d.totalIdr);
-  const stageIndex = STATUS_STAGE[d.orderStatus] ?? 0;
+  const stageIndex = stageFor(d.orderStatus, d.statusBeforeRefund);
 
   const stageTimestamps = ORDER_STAGES.map(() => null);
   stageTimestamps[0] = toIsoDate(d.createdAt);
   (d.trackings || []).forEach((t) => {
-    if (t.status === "cancelled" || t.status === "pending_payment") return;
+    if (["cancelled", "pending_payment", "paid"].includes(t.status) || REFUND_STATUSES.includes(t.status)) return;
     const idx = STATUS_STAGE[t.status];
     if (idx !== undefined && !stageTimestamps[idx]) stageTimestamps[idx] = toIsoDate(t.createdAt);
   });
@@ -106,6 +128,7 @@ export function mapOrderDetail(d) {
   const hold = escrows.find((e) => e.txType === "hold");
   const release = escrows.find((e) => e.txType === "release");
   const refund = escrows.find((e) => e.txType === "refund");
+  const itemsTotal = d.itemsTotal || (d.items || []).reduce((s, it) => s + it.lineTotal, 0);
 
   return {
     id: d.orderId,
@@ -115,6 +138,10 @@ export function mapOrderDetail(d) {
     stageIndex,
     stageTimestamps,
     createdAt: toIsoDate(d.createdAt),
+    paidAt: toIsoDate(d.paidAt),
+    shippedAt: toIsoDate(d.shippedAt),
+    deliveredAt: toIsoDate(d.deliveredAt),
+    completedAt: toIsoDate(d.completedAt),
     items: (d.items || []).map((it) => ({
       id: it.productId,
       orderItemId: it.id,
@@ -122,13 +149,16 @@ export function mapOrderDetail(d) {
       image: it.image,
       price: it.price,
       qty: it.qty,
+      lineTotal: it.lineTotal,
       isReviewed: it.isReviewed,
     })),
-    subtotal: d.totalIdr,
-    shippingFee,
-    gasFee,
-    total,
-    paymentMethod: meta.paymentMethodLabel || d.paymentMethod,
+    itemCount: d.itemCount,
+    subtotal: itemsTotal,
+    itemsTotal,
+    shippingFee: d.shippingFee || 0,
+    gasFee: d.gasFeeEstimate || 0,
+    total: d.totalIdr,
+    paymentMethod: paymentLabel(d.paymentMethod),
     buyerName: d.buyerName,
     buyerWallet: d.buyerWallet,
     sellerId: d.sellerId,
@@ -136,19 +166,40 @@ export function mapOrderDetail(d) {
     sellerWallet: d.sellerWallet,
     address: d.address,
     driver: d.driver,
+    invoiceId: d.invoiceId,
     invoiceHash: d.invoiceHash,
     invoiceTxHash: d.invoiceTxHash,
+    onchainOrderId: d.onchainOrderId,
+    escrowAddress: d.escrowAddress,
+    explorerUrl: d.explorerUrl,
+    sellerDeadlineAt: toIsoDate(d.sellerDeadlineAt),
+    buyerDeadlineAt: toIsoDate(d.buyerDeadlineAt),
+    returnDeadlineAt: toIsoDate(d.returnDeadlineAt),
+    notDeliveredRefundAt: toIsoDate(d.notDeliveredRefundAt),
+    refundCount: d.refundCount ?? 0,
+    maxRefundRequests: d.maxRefundRequests ?? 3,
+    statusBeforeRefund: d.statusBeforeRefund,
+    returnTrackingNumber: d.returnTrackingNumber,
+    buyerAcceptSignature: d.buyerAcceptSignature,
+    acceptedAt: toIsoDate(d.acceptedAt),
+    refunds: (d.refunds || []).map((r) => ({
+      ...r,
+      createdAt: toIsoDate(r.createdAt),
+      decidedAt: toIsoDate(r.decidedAt),
+    })),
     trackings: (d.trackings || []).map((t) => ({ ...t, createdAt: toIsoDate(t.createdAt) })),
+    escrowTransactions: escrows.map((e) => ({ ...e, createdAt: toIsoDate(e.createdAt) })),
     courier: {
-      name: d.driver?.courierCompany || "Waiting for courier",
+      name: d.courierName || d.driver?.courierCompany || "Waiting for courier",
+      driverName: d.driver?.fullName,
       trackingNumber: d.trackingNumber || "-",
     },
     escrow: {
-      locked: !!hold && !release && !refund,
+      locked: HELD_STATUSES.includes(d.orderStatus),
       lockTxHash: hold?.txHash,
       releasedAt: toIsoDate(release?.createdAt || refund?.createdAt),
       releaseTxHash: release?.txHash || refund?.txHash,
-      refunded: !!refund,
+      refunded: d.orderStatus === "refunded" || d.orderStatus === "cancelled",
     },
   };
 }
@@ -183,11 +234,15 @@ export function TransactionProvider({ children }) {
   }, [authHydrated, loadTransactions]);
 
   /**
-   * Checkout cart yang dipilih -> buat order (per seller) -> bayar ke escrow.
-   * Jika pembayaran gagal, order yang belum dibayar dibatalkan dan item
-   * dikembalikan ke cart.
+   * Checkout cart yang dipilih -> buat order (1 per seller) -> approve mUSDT sekali
+   * -> deposit() ke escrow per order -> verifikasi tx di backend.
+   * Jika pembayaran gagal, order yang belum dibayar dibatalkan dan item dikembalikan ke cart.
+   * `onStep(text)` dipanggil untuk menampilkan progres di UI.
    */
-  async function createTransaction({ items, addressId, shippingFee, gasFee, paymentMethod, paymentMethodLabel }) {
+  async function createTransaction({ items, addressId, paymentMethod, onStep }) {
+    const step = (text) => onStep?.(text);
+
+    step("Creating orders…");
     const checkout = await orderService.Checkout(userId, { addressId, paymentMethod });
     if (!checkout.status) throw new Error(checkout.message);
 
@@ -195,15 +250,19 @@ export function TransactionProvider({ children }) {
     const paid = [];
 
     try {
-      for (const [i, order] of orders.entries()) {
-        // ongkir & gas fee dicatat di order pertama
-        saveMeta(order.orderId, {
-          shippingFee: i === 0 ? shippingFee : 0,
-          gasFee: i === 0 ? gasFee : 0,
-          paymentMethodLabel,
-        });
+      const totalUnits = orders.reduce(
+        (sum, o) => sum + BigInt(o.itemsTotalUnits) + BigInt(o.shippingFeeUnits) + BigInt(o.gasFeeUnits),
+        0n,
+      );
 
-        const tx = await holdEscrow(order, user.walletAddress);
+      step("Approve mUSDT in MetaMask…");
+      await ensureAllowance(totalUnits, user.walletAddress);
+
+      for (const [i, order] of orders.entries()) {
+        step(`Deposit to escrow (${i + 1}/${orders.length}) — confirm in MetaMask…`);
+        const tx = await depositOrder(order, user.walletAddress);
+
+        step(`Verifying payment (${i + 1}/${orders.length})…`);
         const res = await orderService.PayOrder(userId, order.orderId, {
           txHash: tx.txHash,
           walletAddress: tx.walletAddress,
@@ -213,10 +272,18 @@ export function TransactionProvider({ children }) {
       }
     } catch (error) {
       const unpaid = orders.filter((o) => !paid.includes(o));
-      await Promise.all(unpaid.map((o) => orderService.CancelOrder(userId, o.orderId).catch(() => {})));
+      // backend menolak pembatalan jika deposit ternyata sudah masuk onchain (order itu tetap dibayar)
+      const cancelResults = await Promise.all(
+        unpaid.map((o) =>
+          orderService
+            .CancelOrder(userId, o.orderId)
+            .then((res) => (res?.status ? o : null))
+            .catch(() => null),
+        ),
+      );
 
-      // kembalikan item dari order yang batal ke cart
-      const unpaidSellers = unpaid.map((o) => o.sellerId);
+      // kembalikan ke cart hanya item dari order yang benar-benar batal
+      const unpaidSellers = cancelResults.filter(Boolean).map((o) => o.sellerId);
       for (const it of items.filter((it) => unpaidSellers.includes(it.sellerId))) {
         try {
           await cartService.AddToCart(userId, it.id);
@@ -231,7 +298,7 @@ export function TransactionProvider({ children }) {
       }
 
       await loadTransactions();
-      throw new Error(getApiErrorMessage(error, "Payment failed."));
+      throw new Error(getChainErrorMessage(error, getApiErrorMessage(error, "Payment failed.")));
     }
 
     await loadTransactions();
@@ -252,20 +319,89 @@ export function TransactionProvider({ children }) {
     [userId],
   );
 
-  // Buyer confirms the parcel arrived in good condition -> escrow release
-  async function confirmReceived(id) {
-    const tx = await getTransaction(id);
-    if (!tx) throw new Error("Order not found");
+  function ensureOk(res) {
+    if (res && res.status === false) throw new Error(res.message);
+    return res;
+  }
 
-    const onchain = await releaseEscrow({ orderCode: tx.code, totalIdr: tx.subtotal }, user.walletAddress);
-    const res = await orderService.ConfirmDelivery(userId, id, {
-      txHash: onchain.txHash,
-      walletAddress: onchain.walletAddress,
-    });
-    if (!res.status) throw new Error(res.message);
-
+  // Buyer menerima barang -> release() onchain (1 transaksi MetaMask) -> dana cair ke seller
+  // v3: buyer cukup menandatangani persetujuan di MetaMask (bukan transaksi, tanpa gas);
+  // seller yang nanti mengklaim dana onchain
+  async function confirmReceived(tx, onStep) {
+    try {
+      onStep?.("Sign the acceptance in MetaMask (free, no gas)…");
+      const signature = await signAcceptance(tx.onchainOrderId, user.walletAddress);
+      onStep?.("Saving acceptance…");
+      ensureOk(await orderService.ConfirmDelivery(userId, tx.id, { signature }));
+    } catch (error) {
+      throw new Error(getChainErrorMessage(error, getApiErrorMessage(error, "Failed to accept the order.")));
+    }
     await loadTransactions();
-    return getTransaction(id);
+    return getTransaction(tx.id);
+  }
+
+  /**
+   * Refund (off-chain, tanpa gas): cek kelayakan + tx id invoice -> simpan alasan & foto.
+   * data: { reason, photoUrl, invoiceTxHash }
+   */
+  async function requestRefund(tx, data, onStep) {
+    try {
+      onStep?.("Verifying invoice transaction…");
+      ensureOk(await refundService.Check(userId, tx.id, data.invoiceTxHash.trim()));
+
+      onStep?.("Submitting refund request…");
+      ensureOk(
+        await refundService.Request(userId, tx.id, {
+          reason: data.reason,
+          photoUrl: data.photoUrl || null,
+          invoiceTxHash: data.invoiceTxHash.trim(),
+        }),
+      );
+    } catch (error) {
+      throw new Error(getApiErrorMessage(error, error.message || "Failed to request refund."));
+    }
+    await loadTransactions();
+    return getTransaction(tx.id);
+  }
+
+  async function backendAction(tx, call, fallback) {
+    try {
+      ensureOk(await call());
+    } catch (error) {
+      throw new Error(getApiErrorMessage(error, error.message || fallback));
+    }
+    await loadTransactions();
+    return getTransaction(tx.id);
+  }
+
+  // retur (off-chain, tanpa MetaMask)
+  const returnShipped = (tx) => backendAction(tx, () => refundService.ReturnShipped(userId, tx.id), "Failed to record the return.");
+  const returnDelivered = (tx) =>
+    backendAction(tx, () => refundService.ReturnDelivered(userId, tx.id), "Failed to record the return.");
+
+  // aksi otomatis yang sudah jatuh tempo, dijalankan backend (gas dibayar wallet operator)
+  const runAutoAction = (tx) => backendAction(tx, () => orderService.RunAuto(tx.id), "Failed to run the automatic action.");
+
+  // pintu darurat: seller tidak kirim sebelum batas -> buyer membatalkan sendiri onchain, lalu sinkronkan
+  async function cancelExpired(tx) {
+    try {
+      const onchain = await cancelExpiredOnchain(tx.onchainOrderId, user.walletAddress);
+      ensureOk(await orderService.Sync(tx.id, onchain.txHash));
+    } catch (error) {
+      throw new Error(getChainErrorMessage(error, getApiErrorMessage(error, "Failed to cancel the order.")));
+    }
+    await loadTransactions();
+    return getTransaction(tx.id);
+  }
+
+  async function syncTransaction(tx) {
+    try {
+      await orderService.Sync(tx.id);
+    } catch (error) {
+      // abaikan, tetap muat ulang data
+    }
+    await loadTransactions();
+    return getTransaction(tx.id);
   }
 
   async function cancelTransaction(id) {
@@ -281,8 +417,9 @@ export function TransactionProvider({ children }) {
     return res;
   }
 
-  const ongoing = transactions.filter((tx) => tx.status !== "completed" && tx.status !== "cancelled");
+  const ongoing = transactions.filter((tx) => !FINISHED_STATUSES.includes(tx.status));
   const completed = transactions.filter((tx) => tx.status === "completed");
+  const refunded = transactions.filter((tx) => tx.status === "refunded");
   const cancelled = transactions.filter((tx) => tx.status === "cancelled");
 
   return (
@@ -291,9 +428,16 @@ export function TransactionProvider({ children }) {
         transactions,
         ongoing,
         completed,
+        refunded,
         cancelled,
         createTransaction,
         confirmReceived,
+        requestRefund,
+        returnShipped,
+        returnDelivered,
+        runAutoAction,
+        cancelExpired,
+        syncTransaction,
         cancelTransaction,
         rateItem,
         getTransaction,

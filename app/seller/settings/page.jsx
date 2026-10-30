@@ -3,14 +3,18 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { AlignLeft, CheckCircle2, Loader2, MapPin, Save, Store } from "lucide-react";
+import { AlignLeft, CheckCircle2, Loader2, MapPin, Save, Store, Wallet } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { BackButton } from "@/components/ui/BackButton";
 import { ShopImageUpload } from "@/components/seller/ShopImageUpload";
 import { CITIES } from "@/components/seller/SellerRegistrationModal";
+import { PayoutToggle } from "@/components/seller/PayoutToggle";
+import { FormSkeleton, Skeleton } from "@/components/ui/Skeleton";
+import { isValidWalletAddress, shortenAddress } from "@/lib/format";
 import { sellerservice } from "@/services/SellerService";
 import { getApiErrorMessage } from "@/lib/axios";
 import { deleteImage, uploadImageIfNeeded } from "@/lib/upload";
+import { toast } from "@/lib/toast";
 
 export default function ShopSettingsPage() {
   const { user, isSeller, hydrated, updateShop } = useAuth();
@@ -19,6 +23,10 @@ export default function ShopSettingsPage() {
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
+  const [walletTouched, setWalletTouched] = useState(false);
+
+  const walletInvalid = form ? !isValidWalletAddress(form.payoutWallet) : false;
+  const showWalletError = form?.payoutMode === "other" && walletTouched && walletInvalid;
 
   useEffect(() => {
     if (!hydrated) return;
@@ -35,6 +43,8 @@ export default function ShopSettingsPage() {
         shopImage: res.shopImage || null,
         shopDescription: res.shopDescription || "",
         city: res.city || "",
+        payoutMode: !res.payoutWallet || res.payoutWallet === user.walletAddress ? "own" : "other",
+        payoutWallet: res.payoutWallet || user.walletAddress || "",
       });
     }
 
@@ -48,6 +58,10 @@ export default function ShopSettingsPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.shopName.trim()) return;
+    if (form.payoutMode === "other" && walletInvalid) {
+      setWalletTouched(true);
+      return;
+    }
 
     setSaving(true);
     let image = { url: "", uploaded: false };
@@ -59,7 +73,7 @@ export default function ShopSettingsPage() {
         image: image.url,
         shopDescription: form.shopDescription.trim(),
         city: form.city,
-        payoutWalletAddress: "",
+        payoutWalletAddress: form.payoutWallet,
       });
       if (!res.status) throw new Error(res.message);
 
@@ -68,13 +82,36 @@ export default function ShopSettingsPage() {
       setDone(true);
     } catch (error) {
       if (image.uploaded) await deleteImage(user.userId, image.url);
-      alert(getApiErrorMessage(error, "Failed to save shop info."));
+      toast.error(getApiErrorMessage(error, "Failed to save shop info."));
     } finally {
       setSaving(false);
     }
   }
 
-  if (!hydrated || !form) return null;
+  function handlePayoutModeChange(mode) {
+    setForm((f) => ({
+      ...f,
+      payoutMode: mode,
+      payoutWallet: mode === "own" ? (user?.walletAddress ?? "") : "",
+    }));
+    setWalletTouched(false);
+  }
+
+  if (!hydrated || !form) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-4 sm:px-6 lg:px-8">
+        <BackButton fallbackHref="/seller" />
+        <div className="mb-4 mt-1 flex items-center gap-3">
+          <Skeleton className="h-10 w-10 !rounded-xl" />
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-5 w-36" />
+            <Skeleton className="h-3 w-56" />
+          </div>
+        </div>
+        <FormSkeleton fields={5} />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-4 sm:px-6 lg:px-8">
@@ -160,6 +197,47 @@ export default function ShopSettingsPage() {
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <label className="mb-2 flex items-center gap-1.5 text-xs font-medium text-ink-soft">
+                <Wallet size={12} />
+                Payout wallet
+              </label>
+              <PayoutToggle value={form.payoutMode} onChange={handlePayoutModeChange} />
+              <div className="mt-2">
+                <input
+                  value={form.payoutWallet}
+                  onChange={(e) => {
+                    const v = e.target.value.trim();
+                    setForm((f) => ({ ...f, payoutWallet: v }));
+                  }}
+                  onBlur={() => setWalletTouched(true)}
+                  disabled={form.payoutMode === "own"}
+                  placeholder="0x..."
+                  maxLength={42}
+                  spellCheck={false}
+                  aria-invalid={showWalletError}
+                  className={`input-field font-mono text-xs ${
+                    showWalletError ? "border-danger focus:border-danger " : ""
+                  }${form.payoutMode === "own" ? "cursor-not-allowed bg-paper text-ink-faint" : ""}`}
+                  required
+                />
+                {showWalletError && (
+                  <p className="mt-1 text-xs text-danger">
+                    Invalid wallet address. It must start with 0x followed by 40 hex characters (0-9, a-f).
+                  </p>
+                )}
+                {form.payoutMode === "own" && user?.walletAddress && (
+                  <p className="mt-1 text-xs text-ink-faint">
+                    Using{" "}
+                    <span className="font-mono text-signal-dark">
+                      {shortenAddress(user.walletAddress, 8)}
+                    </span>{" "}
+                    — your connected wallet.
+                  </p>
+                )}
+              </div>
             </div>
 
             <div className="mt-1 flex gap-3">

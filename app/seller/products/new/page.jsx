@@ -11,6 +11,7 @@ import { ProductForm } from "@/components/seller/ProductForm";
 import { sellerservice } from "@/services/SellerService";
 import { getApiErrorMessage } from "@/lib/axios";
 import { deleteImage, uploadImageIfNeeded } from "@/lib/upload";
+import { toast } from "@/lib/toast";
 
 export default function AddProductPage() {
   const { user, isSeller, hydrated } = useAuth();
@@ -53,7 +54,7 @@ export default function AddProductPage() {
     } catch (error) {
       // simpan produk gagal -> jangan tinggalkan file yatim di storage
       if (image.uploaded) await deleteImage(user.userId, image.url);
-      alert(getApiErrorMessage(error, "Failed to list product."));
+      toast.error(getApiErrorMessage(error, "Failed to list product."));
     }
   }
 

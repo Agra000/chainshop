@@ -3,17 +3,24 @@
 import { useMemo, useState } from "react";
 import { Search, History as HistoryIcon } from "lucide-react";
 import { useTransactions } from "@/context/TransactionContext";
-import { formatIDR } from "@/lib/format";
+import { formatUSDT } from "@/lib/format";
 import { BackButton } from "@/components/ui/BackButton";
 import { OrderCard } from "@/components/transaction/OrderCard";
 import { EmptyState } from "@/components/common/EmptyState";
+import { OrderListPageSkeleton } from "@/components/ui/Skeleton";
 
 export default function HistoryPage() {
-  const { completed, cancelled, hydrated } = useTransactions();
+  const { completed, refunded, cancelled, hydrated } = useTransactions();
   const [query, setQuery] = useState("");
 
-  // order selesai + order yang dibatalkan
-  const history = useMemo(() => [...completed, ...cancelled], [completed, cancelled]);
+  // order selesai + order yang di-refund + order yang dibatalkan
+  const history = useMemo(
+    () =>
+      [...completed, ...refunded, ...cancelled].sort(
+        (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0),
+      ),
+    [completed, refunded, cancelled],
+  );
 
   const filtered = useMemo(() => {
     if (!query.trim()) return history;
@@ -30,7 +37,7 @@ export default function HistoryPage() {
     [completed]
   );
 
-  if (!hydrated) return null;
+  if (!hydrated) return <OrderListPageSkeleton withStats />;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-4 sm:px-6 lg:px-8">
@@ -55,7 +62,7 @@ export default function HistoryPage() {
             <div className="card px-4 py-3">
               <p className="text-xs text-ink-faint">Total spent</p>
               <p className="font-display text-lg font-semibold text-ink">
-                {formatIDR(totalSpent)}
+                {formatUSDT(totalSpent)}
               </p>
             </div>
           </div>
