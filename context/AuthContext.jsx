@@ -1,6 +1,8 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { AUTH_QUERY, NEXT_QUERY, requiresLogin, safeNextPath } from "@/lib/routes";
 import { authService } from "@/services/AuthService";
 import { sellerservice } from "@/services/SellerService";
 import { getApiErrorMessage } from "@/lib/axios";
@@ -24,13 +26,33 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [hydrated, setHydrated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const pathname = usePathname();
+  const loggedOutRef = useRef(false);
+
+  // modal login/signup global: bisa dibuka dari mana saja (tombol Buy now, Add to cart, middleware redirect)
+  const [authMode, setAuthMode] = useState(null); // "login" | "signup" | null
+  const pendingNextRef = useRef(null);
+
+  const openAuth = useCallback((mode = "login", next = null) => {
+    pendingNextRef.current = safeNextPath(next);
+    setAuthMode(mode);
+  }, []);
+
+  const closeAuth = useCallback(() => {
+    pendingNextRef.current = null;
+    setAuthMode(null);
+  }, []);
 
   const logout = useCallback(() => {
     clearToken();
     clearStoreCookie();
     clearRoleCookie();
+    loggedOutRef.current = true;
     setUser(null);
-  }, []);
+    // buang cache halaman di router supaya halaman yang butuh login tidak bisa dibuka lagi dari cache
+    router.refresh();
+  }, [router]);
 
   async function getUserInfo(userId = user?.userId) {
     try {
@@ -97,6 +119,20 @@ export function AuthProvider({ children }) {
     }
   }, [user, hydrated]);
 
+  // Penjaga di sisi client: middleware hanya jalan saat request ke server, sedangkan halaman yang sudah
+  // pernah dibuka bisa disajikan dari cache router (mis. setelah logout lalu tekan Back). Jadi setiap
+  // pindah halaman / status login berubah, cek lagi aksesnya di sini.
+  useEffect(() => {
+    if (!hydrated || user || !requiresLogin(pathname)) return;
+    if (loggedOutRef.current) {
+      loggedOutRef.current = false;
+      router.replace("/");
+      return;
+    }
+    const params = new URLSearchParams({ [AUTH_QUERY]: "login", [NEXT_QUERY]: pathname });
+    router.replace(`/?${params.toString()}`);
+  }, [hydrated, user, pathname, router]);
+
   // token expired / 401 dari backend -> logout otomatis
   useEffect(() => {
     function handleExpired() {
@@ -116,6 +152,14 @@ export function AuthProvider({ children }) {
       walletAddress: res.walletAddress,
       joinedAt: new Date().toISOString(),
     });
+
+    // lanjut ke halaman yang tadi diminta sebelum diminta login (mis. /cart, /payment)
+    const next = pendingNextRef.current;
+    pendingNextRef.current = null;
+    loggedOutRef.current = false;
+    setAuthMode(null);
+    router.refresh();
+    if (next) router.push(next);
   }
 
   // 1. Fungsi Login Berbasis Email / Auth Biasa
@@ -281,6 +325,9 @@ export function AuthProvider({ children }) {
         deleteShop,
         hydrated,
         getUserInfo,
+        authMode,
+        openAuth,
+        closeAuth,
       }}
     >
       {children}

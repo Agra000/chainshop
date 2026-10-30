@@ -6,7 +6,7 @@ import { Minus, Plus, ShoppingCart, Zap, Check, PackageX } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 
 export function ProductActions({ product }) {
-  const { addItem, selectOnly } = useCart();
+  const { addItem, buyNow } = useCart();
   const router = useRouter();
   const stock = Number(product.stock) || 0;
   const outOfStock = stock <= 0;
@@ -36,8 +36,9 @@ export function ProductActions({ product }) {
     if (outOfStock || busy) return;
     setBusy("buy");
     try {
-      await selectOnly(product.id);
-      router.push("/payment");
+      // langsung ke payment hanya dengan produk ini (qty sesuai pilihan); tamu diminta login dulu
+      const ok = await buyNow(product, qty);
+      if (ok) router.push("/payment");
     } finally {
       setBusy("");
     }

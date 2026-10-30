@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ShoppingCart } from "lucide-react";
 import { Logo } from "./Logo";
 import { SearchBar } from "./SearchBar";
@@ -11,11 +11,37 @@ import { UserMenu } from "./UserMenu";
 import { AuthModal } from "./AuthModal";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
+import { AUTH_QUERY, NEXT_QUERY } from "@/lib/routes";
+
+// Middleware mengarahkan tamu ke "?auth=login&next=/cart" -> buka modal login, lalu hapus query dari URL.
+// Dipisah + dibungkus Suspense karena useSearchParams.
+function AuthQueryListener() {
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
+  const { isLoggedIn, hydrated, openAuth } = useAuth();
+
+  useEffect(() => {
+    const mode = searchParams.get(AUTH_QUERY);
+    if (!mode || !hydrated) return;
+
+    const next = searchParams.get(NEXT_QUERY);
+    // ditunda 1 tick: efek "tutup modal saat pindah halaman" di TopNavbar berjalan setelah efek ini
+    if (!isLoggedIn) window.setTimeout(() => openAuth(mode === "signup" ? "signup" : "login", next), 0);
+
+    const rest = new URLSearchParams(searchParams.toString());
+    rest.delete(AUTH_QUERY);
+    rest.delete(NEXT_QUERY);
+    const query = rest.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }, [searchParams, pathname, hydrated, isLoggedIn, openAuth, router]);
+
+  return null;
+}
 
 export function TopNavbar() {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, authMode, openAuth, closeAuth } = useAuth();
   const { totalCount, bump } = useCart();
-  const [authMode, setAuthMode] = useState(null); // "signup" | "login" | null
   const pathname = usePathname();
   const isHomepage = pathname === "/";
 
@@ -24,8 +50,8 @@ export function TopNavbar() {
   // (e.g. via the browser back button) leaves it stuck open on top of
   // whatever page you land on next, blocking it from view (e.g. /cart).
   useEffect(() => {
-    setAuthMode(null);
-  }, [pathname]);
+    closeAuth();
+  }, [pathname, closeAuth]);
 
   return (
     <header className="sticky top-0 z-30 bg-navbar backdrop-blur">
@@ -46,6 +72,12 @@ export function TopNavbar() {
           <Link
             href="/cart"
             aria-label="Open cart"
+            onClick={(e) => {
+              // tamu: langsung buka modal login, setelah login lanjut ke cart
+              if (isLoggedIn) return;
+              e.preventDefault();
+              openAuth("login", "/cart");
+            }}
             className="icon-btn relative shrink-0 !text-white hover:!bg-white/15 hover:!text-white"
           >
             <ShoppingCart size={21} strokeWidth={2} />
@@ -65,14 +97,14 @@ export function TopNavbar() {
             <div className="hidden items-center gap-1.5 sm:flex">
               <button
                 type="button"
-                onClick={() => setAuthMode("signup")}
+                onClick={() => openAuth("signup")}
                 className="btn-ghost !text-white hover:!bg-white/15 hover:!text-white"
               >
                 Sign up
               </button>
               <button
                 type="button"
-                onClick={() => setAuthMode("login")}
+                onClick={() => openAuth("login")}
                 className="btn-secondary !border-white/40 !bg-white/10 !text-white hover:!border-white/60 hover:!bg-white/20"
               >
                 Log in
@@ -87,14 +119,14 @@ export function TopNavbar() {
         <div className="flex items-center gap-1.5 border-t border-white/15 px-4 py-2 sm:hidden">
           <button
             type="button"
-            onClick={() => setAuthMode("signup")}
+            onClick={() => openAuth("signup")}
             className="btn-ghost !px-3 text-xs !text-white hover:!bg-white/15 hover:!text-white"
           >
             Sign up
           </button>
           <button
             type="button"
-            onClick={() => setAuthMode("login")}
+            onClick={() => openAuth("login")}
             className="btn-secondary !px-3 !py-1.5 text-xs !border-white/40 !bg-white/10 !text-white hover:!border-white/60 hover:!bg-white/20"
           >
             Log in
@@ -117,7 +149,10 @@ export function TopNavbar() {
         </div>
       )}
 
-      <AuthModal open={authMode !== null} mode={authMode} onClose={() => setAuthMode(null)} />
+      <AuthModal open={authMode !== null} mode={authMode} onClose={closeAuth} />
+      <Suspense fallback={null}>
+        <AuthQueryListener />
+      </Suspense>
     </header>
   );
 }
