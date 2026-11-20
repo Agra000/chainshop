@@ -1,17 +1,19 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, History as HistoryIcon } from "lucide-react";
+import { Search, History as HistoryIcon, Star } from "lucide-react";
 import { useTransactions } from "@/context/TransactionContext";
 import { formatUSDT } from "@/lib/format";
 import { BackButton } from "@/components/ui/BackButton";
 import { OrderCard } from "@/components/transaction/OrderCard";
 import { EmptyState } from "@/components/common/EmptyState";
 import { OrderListPageSkeleton } from "@/components/ui/Skeleton";
+import { RateOrderModal } from "@/components/transaction/RateOrderModal";
 
 export default function HistoryPage() {
   const { completed, refunded, cancelled, hydrated } = useTransactions();
   const [query, setQuery] = useState("");
+  const [ratingOrder, setRatingOrder] = useState(null);
 
   // order selesai + order yang di-refund + order yang dibatalkan
   const history = useMemo(
@@ -31,6 +33,9 @@ export default function HistoryPage() {
         tx.items.some((it) => it.name?.toLowerCase().includes(q))
     );
   }, [history, query]);
+
+  // order completed yang dananya sudah dilepas ke seller dan masih punya barang belum dirating
+  const waitingRating = useMemo(() => completed.filter((tx) => tx.needsRating).length, [completed]);
 
   const totalSpent = useMemo(
     () => completed.reduce((sum, tx) => sum + tx.total, 0),
@@ -67,6 +72,15 @@ export default function HistoryPage() {
             </div>
           </div>
 
+          {waitingRating > 0 && (
+            <div className="mb-4 flex items-center gap-2 rounded-xl border border-seal/20 bg-seal-soft px-4 py-2.5 text-sm text-seal-dark">
+              <Star size={16} className="shrink-0 fill-seal text-seal" />
+              <span>
+                {waitingRating} completed order{waitingRating > 1 ? "s are" : " is"} waiting for your rating.
+              </span>
+            </div>
+          )}
+
           <div className="relative mb-4">
             <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-faint" />
             <input
@@ -85,12 +99,34 @@ export default function HistoryPage() {
           ) : (
             <div className="flex flex-col gap-3">
               {filtered.map((tx) => (
-                <OrderCard key={tx.id} tx={tx} />
+                <OrderCard
+                  key={tx.id}
+                  tx={tx}
+                  footer={
+                    tx.needsRating && (
+                      <div className="flex items-center justify-between gap-3 border-t border-seal/15 bg-seal-soft/60 px-4 py-2.5 sm:px-5">
+                        <p className="flex items-center gap-2 text-sm text-ink">
+                          <Star size={15} className="shrink-0 fill-seal text-seal" />
+                          {tx.unreviewedCount} item{tx.unreviewedCount > 1 ? "s" : ""} in this order waiting for your rating
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setRatingOrder(tx)}
+                          className="btn-primary shrink-0 !px-4 !py-1.5 text-xs"
+                        >
+                          Rate now
+                        </button>
+                      </div>
+                    )
+                  }
+                />
               ))}
             </div>
           )}
         </>
       )}
+
+      <RateOrderModal open={!!ratingOrder} order={ratingOrder} onClose={() => setRatingOrder(null)} />
     </div>
   );
 }

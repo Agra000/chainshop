@@ -109,6 +109,10 @@ export function mapOrderSummary(o) {
     trackingNumber: o.trackingNumber,
     refundCount: o.refundCount ?? 0,
     createdAt: toIsoDate(o.createdAt),
+    // rating: order completed + dana escrow sudah dilepas ke seller
+    isReviewable: !!o.isReviewable,
+    unreviewedCount: o.unreviewedCount ?? 0,
+    needsRating: !!o.isReviewable && (o.unreviewedCount ?? 0) > 0,
   };
 }
 
@@ -182,6 +186,7 @@ export function mapOrderDetail(d) {
     returnTrackingNumber: d.returnTrackingNumber,
     buyerAcceptSignature: d.buyerAcceptSignature,
     acceptedAt: toIsoDate(d.acceptedAt),
+    isReviewable: !!d.isReviewable,
     refunds: (d.refunds || []).map((r) => ({
       ...r,
       createdAt: toIsoDate(r.createdAt),
@@ -414,6 +419,15 @@ export function TransactionProvider({ children }) {
   async function rateItem(orderItemId, rating, comment) {
     const res = await reviewService.AddReview(userId, { orderItemId, rating, comment });
     if (!res.status) throw new Error(res.message);
+    await loadTransactions(); // jumlah barang yang belum dirating di Order History ikut diperbarui
+    return res;
+  }
+
+  // items: [{ orderItemId, rating, comment }] -> semua barang yang dipilih dalam satu order
+  async function rateOrder(orderId, items) {
+    const res = await reviewService.AddOrderReviews(userId, { orderId, items });
+    if (!res.status) throw new Error(res.message);
+    await loadTransactions();
     return res;
   }
 
@@ -440,6 +454,7 @@ export function TransactionProvider({ children }) {
         syncTransaction,
         cancelTransaction,
         rateItem,
+        rateOrder,
         getTransaction,
         refreshTransactions: loadTransactions,
         hydrated,

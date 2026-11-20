@@ -414,7 +414,7 @@ export default function TransactionDetailPage({ params }) {
                     </p>
                   </div>
                   <p className="text-sm font-medium text-ink">{formatUSDT(item.lineTotal ?? item.qty * item.price)}</p>
-                  {s === "completed" && !item.isReviewed && (
+                  {tx.isReviewable && !item.isReviewed && (
                     <div className="flex w-full items-center gap-1 pl-[60px]">
                       {[1, 2, 3, 4, 5].map((n) => (
                         <button

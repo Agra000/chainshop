@@ -61,6 +61,11 @@ export default function ProductDetailPage({ params }) {
             <div className="mt-2 flex items-center gap-3">
               <RatingStars rating={product.rating} />
               <span className="text-sm text-ink-faint">
+                {product.ratingCount > 0
+                  ? `${product.ratingCount.toLocaleString("en-US")} rating${product.ratingCount > 1 ? "s" : ""}`
+                  : "No ratings yet"}
+              </span>
+              <span className="text-sm text-ink-faint">
                 {product.sold.toLocaleString("en-US")} sold
               </span>
             </div>
