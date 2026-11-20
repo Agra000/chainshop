@@ -16,9 +16,12 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { Avatar } from "@/components/common/Avatar";
 import { SellerRegistrationModal } from "@/components/seller/SellerRegistrationModal";
+import { CountBadge } from "@/components/common/CountBadge";
+import { useSellerNotifications } from "@/context/SellerNotificationContext";
 
 export function UserMenu() {
   const { user, isAdmin, logout } = useAuth();
+  const { total: sellerNotifCount } = useSellerNotifications();
   const [open, setOpen] = useState(false);
   const [sellerModalOpen, setSellerModalOpen] = useState(false);
   const menuRef = useRef(null);
@@ -55,7 +58,16 @@ export function UserMenu() {
           aria-haspopup="menu"
           aria-expanded={open}
         >
-          <Avatar name={user.name} seed={user.walletAddress} size={32} />
+          <span className="relative">
+            <Avatar name={user.name} seed={user.walletAddress} size={32} />
+            {/* order toko yang butuh perhatian (sama dengan angka di dropdown & dashboard) */}
+            <CountBadge
+              count={sellerNotifCount}
+              variant="white"
+              label={`${sellerNotifCount} shop order${sellerNotifCount > 1 ? "s" : ""} need your attention`}
+              className="absolute -right-2 -top-1.5"
+            />
+          </span>
           <span className="hidden max-w-[110px] truncate text-sm font-medium text-white sm:inline">
             {user.name}
           </span>
@@ -98,7 +110,12 @@ export function UserMenu() {
                     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-seal-soft">
                       <Store size={14} className="text-seal-dark" />
                     </div>
-                    <span className="truncate">{user.storeName}</span>
+                    <span className="min-w-0 flex-1 truncate">{user.storeName}</span>
+                    <CountBadge
+                      count={sellerNotifCount}
+                      label={`${sellerNotifCount} order${sellerNotifCount > 1 ? "s" : ""} need your attention`}
+                      className="shrink-0"
+                    />
                   </Link>
                 </div>
                 <div className="mx-3.5 my-1.5 h-px bg-border" />

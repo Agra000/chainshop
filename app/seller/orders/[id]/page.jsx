@@ -42,6 +42,7 @@ import { RejectOrderModal } from "@/components/seller/RejectOrderModal";
 import { ConfirmReturnModal } from "@/components/seller/ConfirmReturnModal";
 import { ClaimPaymentModal } from "@/components/seller/ClaimPaymentModal";
 import { toast } from "@/lib/toast";
+import { useSellerNotifications } from "@/context/SellerNotificationContext";
 import { OrderDetailSkeleton } from "@/components/ui/Skeleton";
 
 function Panel({ tone = "seal", icon: Icon, title, children }) {
@@ -65,6 +66,7 @@ function Panel({ tone = "seal", icon: Icon, title, children }) {
 
 export default function SellerOrderDetailPage({ params }) {
   const { user, hydrated } = useAuth();
+  const { refreshSellerNotifications } = useSellerNotifications();
   const sellerId = user?.storeId;
 
   const [tx, setTx] = useState(null);
@@ -120,6 +122,8 @@ export default function SellerOrderDetailPage({ params }) {
     } finally {
       setBusy("");
       setStep("");
+      // status order bisa berubah -> badge notifikasi di navbar/dropdown/dashboard ikut diperbarui
+      refreshSellerNotifications();
     }
   }
 

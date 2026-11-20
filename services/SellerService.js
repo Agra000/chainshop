@@ -22,6 +22,14 @@ export const sellerservice = {
     return response.data;
   },
 
+  // jumlah order yang butuh perhatian seller -> { newOrders, refundRequested, returnArrived, readyToClaim, total }
+  GetOrderNotifications: async (sellerId) => {
+    const response = await api.get("/Seller/order-notifications", {
+      params: { sellerId },
+    });
+    return response.data;
+  },
+
   // data: { shopName, image, shopDescription, city } -> foto lama di storage dihapus backend jika diganti
   UpdateShop: async (sellerId, data) => {
     const response = await api.put("/Seller/update", data, {

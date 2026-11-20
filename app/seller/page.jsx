@@ -26,9 +26,12 @@ import DeleteStoreModal from "@/components/seller/DeleteStoreModal";
 import { mapProduct } from "@/data/products";
 import { getApiErrorMessage } from "@/lib/axios";
 import { toast } from "@/lib/toast";
+import { CountBadge } from "@/components/common/CountBadge";
+import { useSellerNotifications } from "@/context/SellerNotificationContext";
 
 export default function SellerDashboardPage() {
   const { user, deleteShop, hydrated } = useAuth();
+  const { total: orderNotifCount } = useSellerNotifications();
   const router = useRouter();
   const [shop, setShop] = useState([]);
   const [dashboard, setDashboard] = useState(null);
@@ -86,6 +89,8 @@ export default function SellerDashboardPage() {
       value: String(dashboard?.totalOrders ?? 0),
       icon: BarChart3,
       href: "/seller/orders",
+      // order yang butuh perhatian seller (sama dengan badge di navbar & dropdown Toko Saya)
+      badge: orderNotifCount,
     },
     {
       label: "Completed sales",
@@ -200,9 +205,14 @@ export default function SellerDashboardPage() {
         {/* ── Stats + quick actions ── */}
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-3 gap-3">
-            {stats.map(({ label, value, icon: Icon, href }) => {
+            {stats.map(({ label, value, icon: Icon, href, badge }) => {
               const content = (
                 <>
+                  <CountBadge
+                    count={badge}
+                    label={`${badge} order${badge > 1 ? "s" : ""} need your attention`}
+                    className="absolute -right-2 -top-2"
+                  />
                   <Icon size={16} className="mb-2 text-ink-faint" />
                   <p className="font-display text-xl font-semibold text-ink">
                     {value}
@@ -211,7 +221,7 @@ export default function SellerDashboardPage() {
                 </>
               );
               return href ? (
-                <Link key={label} href={href} className="card px-4 py-3.5">
+                <Link key={label} href={href} className="card relative px-4 py-3.5">
                   {content}
                 </Link>
               ) : (
