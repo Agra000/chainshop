@@ -13,6 +13,8 @@ import {
   Edit3,
   Trash2,
   Boxes,
+  Eye,
+  Star,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { BackButton } from "@/components/ui/BackButton";
@@ -249,33 +251,51 @@ export default function SellerDashboardPage() {
                 {myProducts.map((p) => (
                   <div
                     key={p.id}
-                    className="flex items-center gap-3 rounded-xl border border-border p-3"
+                    className="flex items-center gap-3 rounded-xl border border-border p-3 transition-colors duration-150 hover:border-ink/15 hover:bg-paper/50"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={p.images?.[0]}
-                      alt={p.name}
-                      className="h-14 w-14 shrink-0 rounded-lg object-cover"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-ink">
-                        {p.name}
-                      </p>
-                      <p className="mt-0.5 text-xs text-ink-soft">
-                        {formatUSDT(p.price)} ·{" "}
-                        <span className="inline-flex items-center gap-1">
-                          <Boxes size={11} className="inline" />
-                          {p.stock} in stock
-                        </span>
-                      </p>
-                    </div>
+                    {/* klik foto / nama -> halaman detail produk milik toko sendiri */}
                     <Link
+                      href={`/seller/products/${p.id}`}
+                      className="flex min-w-0 flex-1 items-center gap-3"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={p.images?.[0]}
+                        alt={p.name}
+                        className="h-14 w-14 shrink-0 rounded-lg object-cover"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-ink">
+                          {p.name}
+                        </p>
+                        <p className="mt-0.5 text-xs text-ink-soft">
+                          {formatUSDT(p.price)} ·{" "}
+                          <span className="inline-flex items-center gap-1">
+                            <Boxes size={11} className="inline" />
+                            {p.stock} in stock
+                          </span>{" "}
+                          ·{" "}
+                          <span className="inline-flex items-center gap-1">
+                            <Star size={11} className="inline fill-seal text-seal" />
+                            {Number(p.rating || 0).toFixed(1)}
+                          </span>
+                        </p>
+                      </div>
+                    </Link>
+                    <Link
+                      href={`/seller/products/${p.id}`}
+                      className="btn-ghost hidden shrink-0 !px-3 !py-1.5 !text-xs sm:inline-flex"
+                    >
+                      <Eye size={13} />
+                      Detail
+                    </Link>
+                    {/* <Link
                       href={`/seller/products/${p.id}/edit`}
                       className="btn-secondary shrink-0 !px-3 !py-1.5 !text-xs"
                     >
                       <Edit3 size={13} />
                       Edit
-                    </Link>
+                    </Link> */}
                   </div>
                 ))}
               </div>
